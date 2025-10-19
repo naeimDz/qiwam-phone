@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, ReactNode } from 'react'
-import { Plus, Wallet, TrendingDown, Calendar, Search, Edit2, Trash2, X, Check } from 'lucide-react'
+import { Plus, Wallet, TrendingDown, Calendar, Search, Edit2, Trash2, X, Check, DollarSign, ShoppingCart, Users, Activity } from 'lucide-react'
 import DashboardLayout from '@/components/DashboardLayout'
+import { StatsCard } from '@/components/ui/StatsCard'
 
 interface Expense {
   id: string
@@ -170,40 +171,42 @@ export default function ExpensesPage() {
     </>
   )
 
+  const statsCardExpenses = 
+  <>
+          
+          <StatsCard
+            title="إجمالي اليوم"
+            value=              {filteredExpenses
+                .filter(e => new Date(e.date).toDateString() === new Date().toDateString())
+                .reduce((s, e) => s + e.amount, 0)
+                .toLocaleString()} 
+        icon={TrendingDown}
+        variant="danger"
+        trend={{
+          value: -5.2,
+          isPositive: false
+        }}
+        withGradient
+      />
+
+          <StatsCard
+        title="الفترة المحددة"
+        value={`${totalExpenses.toLocaleString()} دج`}
+        icon={Calendar}
+        variant="primary"
+      />
+
+      <StatsCard
+        title="عدد العمليات"
+        value={filteredExpenses.length}
+        icon={Wallet}
+        variant="accent"
+      />
+
+  </>
   // ========= Content =========
   const content: ReactNode =
       <>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-bg-secondary border border-border rounded-xl p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-text-secondary text-sm">إجمالي اليوم</span>
-              <TrendingDown className="text-red-500" size={20} />
-            </div>
-            <p className="text-3xl font-bold text-text-primary">
-              {filteredExpenses
-                .filter(e => new Date(e.date).toDateString() === new Date().toDateString())
-                .reduce((s, e) => s + e.amount, 0)
-                .toLocaleString()} دج
-            </p>
-          </div>
-
-          <div className="bg-bg-secondary border border-border rounded-xl p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-text-secondary text-sm">الفترة المحددة</span>
-              <Calendar className="text-primary" size={20} />
-            </div>
-            <p className="text-3xl font-bold text-text-primary">{totalExpenses.toLocaleString()} دج</p>
-          </div>
-
-          <div className="bg-bg-secondary border border-border rounded-xl p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-text-secondary text-sm">عدد العمليات</span>
-              <Wallet className="text-accent" size={20} />
-            </div>
-            <p className="text-3xl font-bold text-text-primary">{filteredExpenses.length}</p>
-          </div>
-        </div>
-
         {/* الجدول */}
         <div className="bg-bg-secondary border border-border rounded-xl overflow-hidden ">
           <div className="overflow-x-auto">
@@ -268,7 +271,9 @@ export default function ExpensesPage() {
     
   return (
     <DashboardLayout
-      toolbar={toolbar}>
+      toolbar={toolbar}
+      StatsCard={statsCardExpenses}
+      >
       {content}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">

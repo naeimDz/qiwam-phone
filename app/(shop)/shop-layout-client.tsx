@@ -1,21 +1,19 @@
 // app/(shop)/shop-layout-client.tsx
-
 'use client'
 
-import { useState, useEffect, ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, ReactNode, useMemo, useCallback } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/sidebar'
 import { TopBar } from '@/components/topbar'
 import { CommandPalette } from '@/components/command-palette'
 import { ThemePicker } from '@/components/theme-picker'
 import { menuItems } from '@/lib/menu-config'
-import { getCurrentDateTime } from '@/lib/utils'
-import type { Command, UserInfo } from '@/types'
+import { getActiveSectionFromPath, getCurrentDateTime } from '@/lib/utils'
+import type {  UserInfo } from '@/types'
 import {
-  Home,
   ShoppingCart,
-  Package,
   Users,
+  Package,
   BarChart3,
   FileText,
   Settings,
@@ -25,59 +23,16 @@ interface ShopLayoutClientProps {
   children: ReactNode
 }
 
-export function ShopLayoutClient({ children }: ShopLayoutClientProps) {
-  const router = useRouter()
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [activeSection, setActiveSection] = useState('dashboard')
-  const [commandOpen, setCommandOpen] = useState(false)
-  const [colorPaletteOpen, setColorPaletteOpen] = useState(false)
-  const [currentDateTime, setCurrentDateTime] = useState('')
 
-  // Update date/time every minute
-  useEffect(() => {
-    setCurrentDateTime(getCurrentDateTime())
-    const interval = setInterval(() => {
-      setCurrentDateTime(getCurrentDateTime())
-    }, 60000)
-    return () => clearInterval(interval)
-  }, [])
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault()
-        setCommandOpen(true)
-      }
-      if (e.key === 'F2') {
-        e.preventDefault()
-        router.push('/sales')
-        setActiveSection('sales')
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [router])
-
-  // User info - can be fetched from API in real app
-  const userInfo: UserInfo = {
-    name: 'محمد أحمد',
-    role: 'مدير النظام',
-    initials: 'م',
-  }
-
-  // Command palette actions
-  const allCommands: Command[] = [
+// Custom hook for commands
+function useCommands(router: ReturnType<typeof useRouter>) {
+  return useMemo(() => [
     {
       id: 'new-sale',
       label: 'عملية بيع جديدة',
       icon: ShoppingCart,
       shortcut: 'F2',
-      action: () => {
-        router.push('/sales')
-        setActiveSection('sales')
-      },
+      action: () => router.push('/sales'),
     },
     {
       id: 'new-customer',
@@ -98,10 +53,7 @@ export function ShopLayoutClient({ children }: ShopLayoutClientProps) {
       label: 'تقرير اليوم',
       icon: BarChart3,
       shortcut: 'Alt+R',
-      action: () => {
-        router.push('/reports')
-        setActiveSection('reports')
-      },
+      action: () => router.push('/reports'),
     },
     {
       id: 'search-invoice',
@@ -115,32 +67,106 @@ export function ShopLayoutClient({ children }: ShopLayoutClientProps) {
       label: 'الإعدادات',
       icon: Settings,
       shortcut: 'Alt+S',
-      action: () => {
-        router.push('/settings')
-        setActiveSection('settings')
-      },
+      action: () => router.push('/settings'),
     },
     ...menuItems.map((item) => ({
       id: `nav-${item.id}`,
       label: `الانتقال إلى ${item.label}`,
       icon: item.icon,
       shortcut: item.shortcut,
-      action: () => {
-        router.push(item.href)
-        setActiveSection(item.id)
-      },
+      action: () => router.push(item.href),
     })),
-  ]
+  ], [router]);
+}
 
-  const handleSectionChange = (section: string) => {
-    setActiveSection(section)
+// Custom hook for keyboard shortcuts
+function useKeyboardShortcuts(router: ReturnType<typeof useRouter>, setCommandOpen: (open: boolean) => void) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Command palette
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setCommandOpen(true)
+        return
+      }
+      
+      // Direct shortcuts
+      switch (e.key) {
+        case 'F2':
+          e.preventDefault()
+          router.push('/sales')
+          break
+        case 'F1':
+          e.preventDefault()
+          router.push('/dashboard')
+          break
+        // Add more shortcuts as needed
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [router, setCommandOpen])
+}
+
+export function ShopLayoutClient({ children }: ShopLayoutClientProps) {
+  const router = useRouter()
+  const pathname = usePathname()
+  
+  // State
+const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebar-collapsed')
+    if (saved) setSidebarCollapsed(saved === 'true')
+  }, [])
+  const [commandOpen, setCommandOpen] = useState(false)
+  const [colorPaletteOpen, setColorPaletteOpen] = useState(false)
+  const [currentDateTime, setCurrentDateTime] = useState('')
+
+  // Derived state
+  const activeSection = useMemo(() => 
+    getActiveSectionFromPath(pathname), 
+    [pathname]
+  )
+  const currentSection = useMemo(() => 
+    menuItems.find((item) => item.id === activeSection),
+    [activeSection]
+  )
+
+  // Hooks
+  const allCommands = useCommands(router)
+  useKeyboardShortcuts(router, setCommandOpen)
+
+  // Date/time updates
+  useEffect(() => {
+    const updateDateTime = () => setCurrentDateTime(getCurrentDateTime())
+    
+    updateDateTime() // Initial set
+    const interval = setInterval(updateDateTime, 60000)
+    
+    return () => clearInterval(interval)
+  }, [])
+
+  // Persist sidebar state
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', String(sidebarCollapsed))
+  }, [sidebarCollapsed])
+
+  // Navigation handler
+  const handleSectionChange = useCallback((section: string) => {
     const item = menuItems.find((m) => m.id === section)
     if (item) {
       router.push(item.href)
     }
-  }
+  }, [router])
 
-  const currentSection = menuItems.find((item) => item.id === activeSection)
+  // Mock user data
+  const userInfo: UserInfo = useMemo(() => ({
+    name: 'محمد أحمد',
+    role: 'مدير النظام',
+    initials: 'م',
+  }), [])
 
   return (
     <div className="flex h-screen overflow-hidden bg-bg-secondary">
@@ -161,10 +187,7 @@ export function ShopLayoutClient({ children }: ShopLayoutClientProps) {
           title={currentSection?.label || 'الرئيسية'}
           subtitle={currentDateTime}
           onCommandPaletteOpen={() => setCommandOpen(true)}
-          onNewSale={() => {
-            router.push('/sales')
-            setActiveSection('sales')
-          }}
+          onNewSale={() => router.push('/sales')}
           onColorPaletteOpen={() => setColorPaletteOpen(true)}
         />
 
@@ -173,14 +196,22 @@ export function ShopLayoutClient({ children }: ShopLayoutClientProps) {
           isOpen={commandOpen}
           onClose={() => setCommandOpen(false)}
           commands={allCommands}
-          onExecute={(cmd) => cmd.action()}
+          onExecute={(cmd) => {
+            cmd.action()
+            setCommandOpen(false)
+          }}
         />
 
         {/* Color Palette Picker */}
-        <ThemePicker isOpen={colorPaletteOpen} onClose={() => setColorPaletteOpen(false)} />
+        <ThemePicker 
+          isOpen={colorPaletteOpen} 
+          onClose={() => setColorPaletteOpen(false)} 
+        />
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          {children}
+        </main>
       </div>
     </div>
   )

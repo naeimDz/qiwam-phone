@@ -1,12 +1,11 @@
-import { type ClassValue, clsx } from 'clsx'
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+import { menuItems } from "./menu-config"
 
-/**
- * Utility function to merge Tailwind CSS classes
- * cn = classNames
- */
 export function cn(...inputs: ClassValue[]) {
-  return clsx(inputs)
+  return twMerge(clsx(inputs))
 }
+
 
 /**
  * Format date to Arabic locale
@@ -37,3 +36,8 @@ export function getCurrentDateTime(): string {
   const now = new Date()
   return `${formatDate(now)} - ${formatTime(now)}`
 }
+
+
+export const getActiveSectionFromPath = (pathname: string) => {
+  return menuItems.find((m) => m.href === pathname)?.id || 'dashboard';
+};

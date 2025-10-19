@@ -3,6 +3,7 @@
 import { useState, useEffect, ReactNode } from 'react'
 import { Plus, Users, DollarSign, AlertCircle, Search, Edit2, Trash2, X, Check, Phone, MapPin } from 'lucide-react'
 import DashboardLayout from '@/components/DashboardLayout'
+import { StatsCard } from '@/components/ui/StatsCard'
 
 // ==================== TYPES ====================
 interface Customer {
@@ -196,37 +197,35 @@ export default function CustomersPage() {
       </button>
     </>
   )
+  const statsCardExpenses = 
+  <>
+        <StatsCard
+        title="عملاء عليهم ديون"
+        value={customersWithDebt}
+        icon={AlertCircle}
+        variant="danger"
+        withGradient
+      />
 
+          <StatsCard
+        title="إجمالي الديون"
+        value={`${totalDebt.toLocaleString()} دج`}
+        icon={DollarSign}
+        variant="primary"
+      />
+          
+          <StatsCard
+            title="إجمالي العملاء"
+
+            value=              {totalCustomers} 
+        icon={Users}
+        variant="accent"
+
+      />
+  </>
   // ========= CONTENT =========
   const content: ReactNode = (
     <>
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-bg-secondary border border-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-text-secondary text-sm">إجمالي العملاء</span>
-            <Users className="text-primary" size={20} />
-          </div>
-          <p className="text-3xl font-bold text-text-primary">{totalCustomers}</p>
-        </div>
-
-        <div className="bg-bg-secondary border border-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-text-secondary text-sm">إجمالي الديون</span>
-            <DollarSign className="text-red-500" size={20} />
-          </div>
-          <p className="text-3xl font-bold text-text-primary">{totalDebt.toLocaleString()} دج</p>
-        </div>
-
-        <div className="bg-bg-secondary border border-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-text-secondary text-sm">عملاء عليهم ديون</span>
-            <AlertCircle className="text-accent" size={20} />
-          </div>
-          <p className="text-3xl font-bold text-text-primary">{customersWithDebt}</p>
-        </div>
-      </div>
-
       {/* Table */}
       <div className="bg-bg-secondary border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
@@ -300,7 +299,7 @@ export default function CustomersPage() {
   )
 
   return (
-    <DashboardLayout toolbar={toolbar}>
+    <DashboardLayout toolbar={toolbar} StatsCard={statsCardExpenses} >
       {content}
 
       {/* Add/Edit Modal */}
