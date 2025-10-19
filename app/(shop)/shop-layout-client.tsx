@@ -1,3 +1,5 @@
+// app/(shop)/shop-layout-client.tsx
+
 'use client'
 
 import { useState, useEffect, ReactNode } from 'react'

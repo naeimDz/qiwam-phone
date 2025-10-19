@@ -7,6 +7,7 @@ import {
   FileText,
   Settings,
   AlertCircle,
+  Wallet,
 } from 'lucide-react'
 import type { MenuItem } from '@/types'
 
@@ -40,6 +41,12 @@ export const menuItems: MenuItem[] = [
     icon: Users,
     href: '/customers',
     shortcut: 'Alt+4'
+  },
+  { 
+  id: 'expenses', 
+  label: 'النفقات اليومية', 
+  icon: Wallet, 
+  href: '/expenses' 
   },
   {
     id: 'reports',

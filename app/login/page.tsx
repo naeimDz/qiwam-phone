@@ -1,5 +1,4 @@
-import { Smartphone } from 'lucide-react'
-import { Logo } from '@/components/ui/logo'
+import Logo from "@/components/ui/logo";
 
 export default function LoginPage() {
   return (
@@ -7,7 +6,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <Logo size={64} className="text-primary" />
+            <Logo width={64} height={64} className="text-primary" />
           </div>
           <h1 className="text-3xl font-bold text-text-primary mb-2">محل الهواتف</h1>
           <p className="text-text-secondary">نظام الإدارة الشامل</p>

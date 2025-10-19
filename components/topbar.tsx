@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Search, Command, Sun, Moon, Bell, ShoppingCart } from 'lucide-react'
 import { useTheme } from '@/lib/theme'
 import type { TopBarProps } from '@/types'
@@ -12,6 +13,11 @@ export function TopBar({
   onColorPaletteOpen,
 }: TopBarProps) {
   const { isDark, toggleTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   return (
     <div className="px-6 py-4 bg-bg-primary shadow-sm border-b border-border">
@@ -41,9 +47,10 @@ export function TopBar({
           <button
             onClick={toggleTheme}
             className="p-2.5 rounded-xl transition-all duration-300 text-text-secondary bg-bg-secondary hover:bg-hover"
-            title={isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
+            title={mounted ? (isDark ? 'الوضع الفاتح' : 'الوضع الداكن') : 'تبديل الوضع'}
+            suppressHydrationWarning
           >
-            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            {mounted ? (isDark ? <Sun size={18} /> : <Moon size={18} />) : <Moon size={18} />}
           </button>
 
           {/* Color Palette Picker */}

@@ -1,3 +1,4 @@
+// lib/theme.tsx
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
@@ -56,56 +57,40 @@ export const colorPalettes: Record<string, ColorPalette> = {
   }
 }
 
+const applyThemeColors = (isDark: boolean, palette: ColorPalette) => {
+  const paletteColors = isDark ? palette.dark : palette.light
+  const root = document.documentElement
+  
+  root.style.setProperty('--color-primary', paletteColors.primary)
+  root.style.setProperty('--color-accent', paletteColors.accent)
+  root.style.setProperty('--color-secondary', isDark ? '#E8E8E8' : '#3A3A3A')
+  root.style.setProperty('--color-bg-primary', isDark ? '#1A1A1A' : '#FFFFFF')
+  root.style.setProperty('--color-bg-secondary', isDark ? '#242424' : '#F5F5F5')
+  root.style.setProperty('--color-bg-light', isDark ? '#2E2E2E' : '#FAFAFA')
+  root.style.setProperty('--color-text-primary', isDark ? '#F5F5F5' : '#1E1E1E')
+  root.style.setProperty('--color-text-secondary', isDark ? '#A8A8A8' : '#6E6E6E')
+  root.style.setProperty('--color-border', isDark ? '#3A3A3A' : '#E5E5E5')
+  root.style.setProperty('--color-hover', isDark ? '#333333' : '#F5F5F5')
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false)
   const [isDark, setIsDark] = useState(false)
   const [currentPalette, setCurrentPalette] = useState('green')
 
-  // Load theme from localStorage on mount
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme')
-    const savedPalette = localStorage.getItem('palette')
-    
-    if (savedTheme === 'dark') {
-      setIsDark(true)
-      document.documentElement.classList.add('dark')
-    }
-    
-    if (savedPalette && colorPalettes[savedPalette]) {
-      setCurrentPalette(savedPalette)
-    }
+    // Read from DOM after mount to match server-rendered HTML
+    setIsDark(document.documentElement.classList.contains('dark'))
+    const saved = localStorage.getItem('palette')
+    setCurrentPalette(saved && colorPalettes[saved] ? saved : 'green')
+    setMounted(true)
   }, [])
 
-  // Update CSS variables when theme or palette changes
   useEffect(() => {
+    if (!mounted) return
     const palette = colorPalettes[currentPalette]
-    const paletteColors = isDark ? palette.dark : palette.light
-
-    const root = document.documentElement
-    
-    if (isDark) {
-      root.style.setProperty('--color-primary', paletteColors.primary)
-      root.style.setProperty('--color-secondary', '#E8E8E8')
-      root.style.setProperty('--color-accent', paletteColors.accent)
-      root.style.setProperty('--color-bg-primary', '#1A1A1A')
-      root.style.setProperty('--color-bg-secondary', '#242424')
-      root.style.setProperty('--color-bg-light', '#2E2E2E')
-      root.style.setProperty('--color-text-primary', '#F5F5F5')
-      root.style.setProperty('--color-text-secondary', '#A8A8A8')
-      root.style.setProperty('--color-border', '#3A3A3A')
-      root.style.setProperty('--color-hover', '#333333')
-    } else {
-      root.style.setProperty('--color-primary', paletteColors.primary)
-      root.style.setProperty('--color-secondary', '#3A3A3A')
-      root.style.setProperty('--color-accent', paletteColors.accent)
-      root.style.setProperty('--color-bg-primary', '#FFFFFF')
-      root.style.setProperty('--color-bg-secondary', '#F5F5F5')
-      root.style.setProperty('--color-bg-light', '#FAFAFA')
-      root.style.setProperty('--color-text-primary', '#1E1E1E')
-      root.style.setProperty('--color-text-secondary', '#6E6E6E')
-      root.style.setProperty('--color-border', '#E5E5E5')
-      root.style.setProperty('--color-hover', '#F5F5F5')
-    }
-  }, [isDark, currentPalette])
+    applyThemeColors(isDark, palette)
+  }, [isDark, currentPalette, mounted])
 
   const palette = colorPalettes[currentPalette]
   const paletteColors = isDark ? palette.dark : palette.light

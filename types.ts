@@ -114,9 +114,24 @@ export interface NavItemProps {
   isActive: boolean
   isCollapsed: boolean
   onClick: () => void
+  dir?: 'ltr' | 'rtl'
+  variant?: 'default' | 'bottom' | 'alert'
 }
 
 export interface LogoProps {
   size?: number
   className?: string
 }
+
+
+export interface Expense {
+  id: string
+  amount: number
+  category: string
+  description: string
+  date: string
+  imageUrl?: string
+}
+
+
+

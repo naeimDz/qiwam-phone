@@ -1,24 +1,54 @@
-import type { LogoProps } from '@/types'
+// components/Logo.tsx
+import React from "react";
 
-export function Logo({ size = 36, className = '' }: LogoProps) {
+type Props = {
+  width?: number;
+  height?: number;
+  className?: string;
+};
+
+export default function Logo({
+  width = 48,
+  height = 48,
+  className = "",
+}: Props) {
   return (
     <svg
-      width={size}
-      height={size}
-      viewBox="0 0 100 100"
       className={className}
-      fill="none"
+      width={width}
+      height={height}
+      viewBox="0 0 1024 1024"
       xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-label="Site logo"
     >
-      <rect width="100" height="100" rx="20" fill="currentColor" fillOpacity="0.1" />
-      <path
-        d="M30 25 L50 25 L50 45 L30 45 Z M50 25 L70 25 L70 45 L50 45 Z M30 45 L50 45 L50 65 L30 65 Z M50 45 L70 45 L70 65 L50 65 Z M40 70 L60 70 L60 75 L40 75 Z"
-        fill="currentColor"
+      {/* outer ring */}
+      <circle
+        cx="512"
+        cy="512"
+        r="420"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="36"
+        className="text-gray-700 dark:text-gray-300"
       />
-      <circle cx="38" cy="33" r="2" fill="currentColor" fillOpacity="0.6" />
-      <circle cx="62" cy="33" r="2" fill="currentColor" fillOpacity="0.6" />
-      <circle cx="38" cy="53" r="2" fill="currentColor" fillOpacity="0.6" />
-      <circle cx="62" cy="53" r="2" fill="currentColor" fillOpacity="0.6" />
+
+      {/* staircase (rectangular steps, centered alignment) */}
+      <g transform="translate(260,700)">
+        {/* each step uses theme color */}
+        <rect x="0" y="0" width="120" height="80" fill="hsl(var(--primary))" />
+        <rect x="120" y="-80" width="120" height="80" fill="hsl(var(--primary))" />
+        <rect x="240" y="-160" width="120" height="80" fill="hsl(var(--primary))" />
+        <rect x="360" y="-240" width="120" height="80" fill="hsl(var(--primary))" />
+
+        {/* top circle: centered horizontally with the last rectangle */}
+        <circle
+          cx="420"   // mid of last rect (360 + 120/2)
+          cy="-280"  // vertically centered above last rect (-240 - 80/2)
+          r="40"
+          fill="hsl(var(--secondary))"
+        />
+      </g>
     </svg>
-  )
+  );
 }
