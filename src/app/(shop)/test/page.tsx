@@ -1,64 +1,39 @@
-'use client'
+// app/(dashboard)/purchases/page.tsx
 
-import { useState, useEffect } from 'react'
-import { ExpenseClientRepo } from '@/lib/supabase/queries/client/expense.client'
-import { NewExpense } from '@/lib/types/expense'
+import { createClientServer } from '@/lib/supabase/supabaseServer'
+import { PurchaseList } from './PurchaseList'
+import { PurchaseFormContainer } from './PurchaseForm'
 
-export default function ExpensesPage() {
-  const [expenses, setExpenses] = useState<any[]>([])
-  const [form, setForm] = useState<NewExpense>({
-    storeid: '550e8400-e29b-41d4-a716-446655440000',
-    category: '',
-    amount: 0,
-    description: '',
-  })
+export default async function PurchasesPage() {
+  const supabase = await createClientServer()
 
-  async function fetchExpenses() {
-    const res = await fetch(`/api/expense?storeid=${form.storeid}`)
-    const data = await res.json()
-    setExpenses(data)
-  }
 
-  async function handleAdd() {
-    const added = await ExpenseClientRepo.create(form)
-    setExpenses((prev) => [added, ...prev])
-    setForm({ ...form, category: '', amount: 0, description: '' })
-  }
 
-  useEffect(() => {
-    fetchExpenses()
-  }, [])
+  const storeId = "550e8400-e29b-41d4-a716-446655440000"
+
+  // جلب الموردين
+  const { data: suppliers = [] } = await supabase
+    .from('supplier')
+    .select('id, name')
+    .eq('storeid', storeId)
 
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Expenses</h1>
-
-      <div className="flex gap-2">
-        <input
-          placeholder="Category"
-          value={form.category}
-          onChange={(e) => setForm({ ...form, category: e.target.value })}
-          className="border p-2"
-        />
-        <input
-          type="number"
-          placeholder="Amount"
-          value={form.amount}
-          onChange={(e) => setForm({ ...form, amount: parseFloat(e.target.value) })}
-          className="border p-2"
-        />
-        <button onClick={handleAdd} className="bg-green-600 text-white px-3 py-2 rounded">
-          Add
-        </button>
+    <div className="space-y-8 p-6">
+      <div>
+        <h1 className="text-3xl font-bold mb-6">المشتريات</h1>
       </div>
 
-      <ul>
-        {expenses.map((ex) => (
-          <li key={ex.id}>
-            {ex.category} - {ex.amount} DA
-          </li>
-        ))}
-      </ul>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Form - Wrapped in Client Component */}
+        <div className="lg:col-span-1">
+          <PurchaseFormContainer storeId={storeId} suppliers={suppliers!} />
+        </div>
+
+        {/* List */}
+        <div className="lg:col-span-2">
+          <PurchaseList storeId={storeId} />
+        </div>
+      </div>
     </div>
   )
 }
