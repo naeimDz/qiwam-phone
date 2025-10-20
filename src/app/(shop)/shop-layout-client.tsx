@@ -7,7 +7,7 @@ import { Sidebar } from '@/components/sidebar'
 import { TopBar } from '@/components/topbar'
 import { CommandPalette } from '@/components/command-palette'
 import { ThemePicker } from '@/components/theme-picker'
-import { menuItems } from '@/lib/menu-config'
+import { bottomMenuItems, menuItems } from '@/lib/menu-config'
 import { getActiveSectionFromPath, getCurrentDateTime } from '@/lib/utils'
 import type {  UserInfo } from '@/types'
 import {
@@ -154,12 +154,12 @@ const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   }, [sidebarCollapsed])
 
   // Navigation handler
+  const allMenuItems = useMemo(() => [...menuItems, ...bottomMenuItems], [])
   const handleSectionChange = useCallback((section: string) => {
-    const item = menuItems.find((m) => m.id === section)
-    if (item) {
-      router.push(item.href)
-    }
-  }, [router])
+    const item = allMenuItems.find((m) => m.id === section)
+    if (item) router.push(item.href)
+  }, [router, allMenuItems])
+
 
   // Mock user data
   const userInfo: UserInfo = useMemo(() => ({
