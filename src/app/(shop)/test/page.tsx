@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { NewExpense } from '@/lib/supabase/queries/types'
 import { ExpenseClientRepo } from '@/lib/supabase/queries/client/expense.client'
+import { NewExpense } from '@/lib/types/expense'
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<any[]>([])

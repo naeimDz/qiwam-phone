@@ -1,18 +1,12 @@
 'use client'
 
 import { useState, useEffect, ReactNode } from 'react'
-import { Plus, Wallet, TrendingDown, Calendar, Search, Edit2, Trash2, X, Check, DollarSign, ShoppingCart, Users, Activity } from 'lucide-react'
+import { Plus, Wallet, TrendingDown, Calendar, Search, Edit2, Trash2, X, Check } from 'lucide-react'
 import DashboardLayout from '@/components/DashboardLayout'
 import { StatsCard } from '@/components/ui/StatsCard'
+import { expensesApi } from '@/app/api/expense/route'
+import { Expense } from '@/lib/types/expense'
 
-interface Expense {
-  id: string
-  amount: number
-  category: string
-  description: string
-  date: string
-  imageUrl?: string
-}
 
 interface CategoryType {
   id: string
@@ -38,87 +32,117 @@ export default function ExpensesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDate, setSelectedDate] = useState<string>('today')
-
+  const [loading, setLoading] = useState(false)
+  const storeId = '550e8400-e29b-41d4-a716-446655440000'
   const [formData, setFormData] = useState({
     amount: '',
     category: '',
-    description: ''
+    description: ' '
   })
 
+const getExpenseDate = (expense: Expense): Date | null => {
+  const dateStr = expense.expense_date || expense.createdat
+  return dateStr ? new Date(dateStr) : null
+}
+
+ // 📥 Fetch Expenses
+  const fetchExpenses = async () => {
+    try {
+      setLoading(true)
+      const data = await expensesApi.getAll(storeId, {
+        category: selectedCategory,
+        dateRange: selectedDate
+      })
+      setExpenses(data)
+    } catch (error) {
+      console.error('Failed to fetch expenses:', error)
+      alert('فشل تحميل المصاريف')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 🔄 Load on mount & filter changes
   useEffect(() => {
     setMounted(true)
-    setExpenses([
-      {
-        id: '1',
-        amount: 3000,
-        category: 'rent',
-        description: 'كراء 3 أيام',
-        date: new Date().toISOString()
-      },
-      {
-        id: '2',
-        amount: 200,
-        category: 'phone',
-        description: 'كرت شحن موبيليس',
-        date: new Date().toISOString()
-      },
-      {
-        id: '3',
-        amount: 500,
-        category: 'coffee',
-        description: 'قهوة للعمال',
-        date: new Date(Date.now() - 86400000).toISOString()
-      }
-    ])
-  }, [])
+    fetchExpenses()
+  }, [selectedCategory, selectedDate]) // re-fetch when filters change
 
-  if (!mounted) return null
-
-  const filteredExpenses = expenses.filter(exp => {
-    const matchCategory = selectedCategory === 'all' || exp.category === selectedCategory
-    const matchSearch = exp.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const expDate = new Date(exp.date)
-    const today = new Date()
-    let matchDate = true
-
-    if (selectedDate === 'today') {
-      matchDate = expDate.toDateString() === today.toDateString()
-    } else if (selectedDate === 'week') {
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
-      matchDate = expDate >= weekAgo
-    } else if (selectedDate === 'month') {
-      matchDate = expDate.getMonth() === today.getMonth()
-    }
-
-    return matchCategory && matchSearch && matchDate
-  })
-
-  const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0)
-
-  const handleAddExpense = () => {
+  // ➕ Add Expense
+  const handleAddExpense = async () => {
     if (!formData.amount || !formData.category || !formData.description) {
       alert('يرجى ملء جميع الحقول')
       return
     }
 
-    const newExpense: Expense = {
-      id: Date.now().toString(),
-      amount: parseFloat(formData.amount),
-      category: formData.category,
-      description: formData.description,
-      date: new Date().toISOString()
-    }
+    try {
+      setLoading(true)
+      const newExpense = await expensesApi.create({
+        storeid: storeId,
+        category: formData.category,
+        amount: parseFloat(formData.amount),
+        description: formData.description,
+        expense_date: new Date().toISOString(),
+        //createdby: user?.id
+      })
 
-    setExpenses([newExpense, ...expenses])
-    setFormData({ amount: '', category: '', description: '' })
-    setShowAddModal(false)
+      setExpenses([newExpense, ...expenses])
+      setFormData({ amount: '', category: '', description: '' })
+      setShowAddModal(false)
+    } catch (error) {
+      console.error('Failed to add expense:', error)
+      alert('فشل إضافة المصروف')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleDeleteExpense = (id: string) => {
-    if (confirm('هل تريد حذف هذا المصروف؟')) {
+  // 🗑️ Delete Expense
+  const handleDeleteExpense = async (id: string) => {
+    if (!confirm('هل تريد حذف هذا المصروف؟')) return
+
+    try {
+      setLoading(true)
+      await expensesApi.softDelete(id)
       setExpenses(expenses.filter(exp => exp.id !== id))
+    } catch (error) {
+      console.error('Failed to delete expense:', error)
+      alert('فشل حذف المصروف')
+    } finally {
+      setLoading(false)
     }
   }
+
+
+
+  if (!mounted) return null
+
+
+  // 🔍 Client-side search filter
+const filteredExpenses = expenses.filter(exp => {
+  const matchCategory = selectedCategory === 'all' || exp.category === selectedCategory
+  const matchSearch = exp.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  
+  const expDate = getExpenseDate(exp)  // استخدم الدالة هنا
+  if (!expDate) return matchCategory && matchSearch
+  
+  const today = new Date()
+  let matchDate = true
+
+  if (selectedDate === 'today') {
+    matchDate = expDate.toDateString() === today.toDateString()
+  } else if (selectedDate === 'week') {
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+    matchDate = expDate >= weekAgo
+  } else if (selectedDate === 'month') {
+    matchDate = expDate.getMonth() === today.getMonth()
+  }
+
+  return matchCategory && matchSearch && matchDate
+})
+
+  const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0)
+
 
   const getCategoryInfo = (categoryId: string) =>
     categories.find(c => c.id === categoryId) || categories[categories.length - 1]
@@ -176,18 +200,19 @@ export default function ExpensesPage() {
           
           <StatsCard
             title="إجمالي اليوم"
-            value=              {filteredExpenses
-                .filter(e => new Date(e.date).toDateString() === new Date().toDateString())
-                .reduce((s, e) => s + e.amount, 0)
-                .toLocaleString()} 
-        icon={TrendingDown}
-        variant="danger"
-        trend={{
-          value: -5.2,
-          isPositive: false
-        }}
-        withGradient
-      />
+            value={filteredExpenses
+              .filter(e => {
+                const expDate = getExpenseDate(e)  // استخدم الدالة هنا
+                if (!expDate) return false
+                return expDate.toDateString() === new Date().toDateString()
+              })
+              .reduce((s, e) => s + e.amount, 0)
+              .toLocaleString()} 
+            icon={TrendingDown}
+            variant="danger"
+            trend={{ value: -5.2, isPositive: false }}
+            withGradient
+              />
 
           <StatsCard
         title="الفترة المحددة"
@@ -244,7 +269,12 @@ export default function ExpensesPage() {
                           <span className="text-red-500 font-bold">{expense.amount.toLocaleString()} دج</span>
                         </td>
                         <td className="px-4 py-4 text-text-secondary text-sm">
-                          {new Date(expense.date).toLocaleDateString('ar-DZ')}
+                          {(() => {
+                            const expDate = getExpenseDate(expense)  // استخدم الدالة هنا
+                            return expDate 
+                              ? expDate.toLocaleDateString('ar-DZ')
+                              : 'غير محدد'
+                          })()}
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center justify-center gap-2">

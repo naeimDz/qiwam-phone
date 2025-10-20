@@ -4,7 +4,6 @@ import {
   Package,
   Users,
   BarChart3,
-  FileText,
   Settings,
   AlertCircle,
   Wallet,
@@ -21,11 +20,11 @@ export const menuItems: MenuItem[] = [
     shortcut: 'Alt+1'
   },
   { 
-  id: 'cash-register', 
-  label: 'الصندوق', 
-  icon: Wallet, 
-  href: '/cash',
-  shortcut: 'F8'
+    id: 'cash-register', 
+    label: 'الصندوق', 
+    icon: Wallet, 
+    href: '/cash',
+    shortcut: 'F8'
   },
   {
     id: 'sales',
@@ -44,11 +43,11 @@ export const menuItems: MenuItem[] = [
     shortcut: 'Alt+3'
   },
   { 
-  id: 'purchase', 
-  label: 'فاتورة شراء', 
-  icon: FileInput, 
-  href: '/purchase-invoice',
-  shortcut: 'F6'
+    id: 'purchase', 
+    label: 'فاتورة شراء', 
+    icon: FileInput, 
+    href: '/purchase-invoice',
+    shortcut: 'F6'
   },
   {
     id: 'customers',
@@ -58,10 +57,10 @@ export const menuItems: MenuItem[] = [
     shortcut: 'Alt+4'
   },
   { 
-  id: 'expenses', 
-  label: 'النفقات اليومية', 
-  icon: Wallet, 
-  href: '/expenses' 
+    id: 'expenses', 
+    label: 'النفقات اليومية', 
+    icon: Wallet, 
+    href: '/expenses' 
   },
   {
     id: 'reports',

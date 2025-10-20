@@ -1,7 +1,8 @@
 // lib/supabase/queries/client/expense.client.ts
 
+import { Expense } from "@/types"
 import { createClientBrowser } from "../../supabaseClient"
-import { Expense, NewExpense, UpdateExpense } from "../types"
+import { NewExpense, UpdateExpense } from "@/lib/types/expense"
 
 export const ExpenseClientRepo = {
   async create(newExpense: NewExpense) {

@@ -1,28 +1,76 @@
-import { ExpenseClientRepo } from '@/lib/supabase/queries/client/expense.client'
-import { ExpenseServerRepo } from '@/lib/supabase/queries/server/expense.server'
-import { NextResponse } from 'next/server'
+// lib/api/expenses.ts
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url)
-  const storeid = searchParams.get('storeid')
+import { createClientBrowser } from '@/lib/supabase/supabaseClient';
+import type { Expense, NewExpense, UpdateExpense } from '@/lib/types/expense'
 
-  if (!storeid) return NextResponse.json({ error: 'Missing storeid' }, { status: 400 })
+const supabase = createClientBrowser()
 
-  try {
-    const data = await ExpenseServerRepo.getAll(storeid)
-    return NextResponse.json(data)
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
-  }
-}
+export const expensesApi = {
+  // 📖 Read
+  async getAll(storeId: string, filters?: { category?: string; dateRange?: string }) {
+    let query = supabase
+      .from('expense')
+      .select('*')
+      .eq('storeid', storeId)
+      .is('deleted_at', null)
+      .order('expense_date', { ascending: false })
 
-export async function POST(req: Request) {
-  const body = await req.json()
+    if (filters?.category && filters.category !== 'all') {
+      query = query.eq('category', filters.category)
+    }
 
-  try {
-    const data = await ExpenseClientRepo.create(body)
-    return NextResponse.json(data)
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    if (filters?.dateRange) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      if (filters.dateRange === 'today') {
+        query = query.gte('expense_date', today.toISOString())
+      } else if (filters.dateRange === 'week') {
+        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+        query = query.gte('expense_date', weekAgo.toISOString())
+      } else if (filters.dateRange === 'month') {
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+        query = query.gte('expense_date', monthStart.toISOString())
+      }
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+    return data as Expense[]
+  },
+
+  // ➕ Create
+  async create(expense: NewExpense) {
+    const { data, error } = await supabase
+      .from('expense')
+      .insert(expense)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data as Expense
+  },
+
+  // ✏️ Update
+  async update(id: string, updates: UpdateExpense) {
+    const { data, error } = await supabase
+      .from('expense')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data as Expense
+  },
+
+  // 🗑️ Soft Delete
+  async softDelete(id: string) {
+    const { error } = await supabase
+      .from('expense')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+    
+    if (error) throw error
   }
 }
