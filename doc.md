@@ -584,3 +584,616 @@ export default function ProductsPage() {
 8. ❌ لا Hydration errors
 
 **كل شيء يجب أن يدعم Dark Mode تلقائياً بفضل CSS Variables! 🎨**
+
+
+
+
+
+
+
+
+# AI Assistant Instructions - Supabase Integration (Core Entities)
+## Multi-Tenant SaaS - Phase 1A & 1B
+
+---
+
+## Critical Context
+
+**Your Architecture:**
+- Multi-Tenant SaaS (Users manage stores with subscriptions)
+- Supabase Auth enabled
+- RLS policies configured in Supabase Dashboard
+- Supabase Setup: Client + Server with API (Already configured)
+- Objective: Core Entities with proper tenant isolation
+
+**This Document:**
+- ONLY tables/types that exist in your schema
+- NO hypothetical fields
+- Phase 1A (Auth) + Phase 1B (Master Data)
+
+---
+**Critical Rules for Multi-Tenant:**
+
+- EVERY query must filter by storeid (tenant isolation via RLS)
+- EVERY table must have storeid uuid NOT NULL foreign key
+- NEVER insert without storeid - RLS will block it
+- Auth user → Get their default store from users table
+- Subscription check before operations (postponed for Phase 2)
+
+---
+## Exact Tables & Types from Your Schema
+
+### Database Tables (from schema):
+```
+store
+├─ store_settings
+├─ users
+├─ brand
+├─ category
+├─ supplier
+├─ phone
+├─ accessory
+├─ customer
+├─ sale
+├─ sale_item
+├─ purchase
+├─ purchase_item
+├─ payment
+├─ expense
+├─ return_transaction
+├─ cash_movement
+├─ cash_register
+├─ audit_log
+├─ notification
+├─ stock_movement
+└─ trade_transaction
+```
+
+---
+
+## Phase 1A: Authentication & Store Setup
+
+### Table 1: **store**
+
+#### Schema Columns:
+```typescript
+id: uuid (PRIMARY KEY)
+name: string
+address: text
+phone: string
+plan: 'free' | 'paid'
+startdate: timestamp
+enddate: timestamp | null
+active: boolean
+createdat: timestamp
+```
+
+#### TypeScript Type:
+```typescript
+export type Store = {
+  id: string
+  name: string
+  address: string | null
+  phone: string | null
+  plan: 'free' | 'paid'
+  startdate: Date
+  enddate: Date | null
+  active: boolean
+  createdat: Date
+}
+```
+
+#### DB Layer Priority:
+```
+getStoreById(storeid: string): Promise<Store>
+```
+
+---
+
+### Table 2: **store_settings**
+
+#### Schema Columns:
+```typescript
+storeid: uuid (PRIMARY KEY & FOREIGN KEY → store.id)
+invoice_footer: text
+receipt_footer: text
+phone: string
+tax_number: string | null
+logo_url: text | null
+currency: 'DZD' | 'EUR' | 'USD' | 'SAR' | 'AED'
+locale: 'ar-DZ' | 'fr-DZ' | 'en-US'
+print_logo: boolean
+print_qr: boolean
+auto_print_invoice: boolean
+notify_low_stock: boolean
+notify_warranty_expiry: boolean
+notify_daily_report: boolean
+createdat: timestamp
+updatedat: timestamp
+deleted_at: timestamp | null
+```
+
+#### TypeScript Type:
+```typescript
+export type StoreSettings = {
+  storeid: string
+  invoice_footer: string
+  receipt_footer: string
+  phone: string
+  tax_number: string | null
+  logo_url: string | null
+  currency: 'DZD' | 'EUR' | 'USD' | 'SAR' | 'AED'
+  locale: 'ar-DZ' | 'fr-DZ' | 'en-US'
+  print_logo: boolean
+  print_qr: boolean
+  auto_print_invoice: boolean
+  notify_low_stock: boolean
+  notify_warranty_expiry: boolean
+  notify_daily_report: boolean
+  createdat: Date
+  updatedat: Date
+  deleted_at: Date | null
+}
+```
+
+#### DB Layer Priority:
+```
+getStoreSettings(storeid: string): Promise<StoreSettings>
+updateStoreSettings(storeid: string, updates: Partial<StoreSettings>): Promise<StoreSettings>
+```
+
+---
+
+### Table 3: **users**
+
+#### Schema Columns:
+```typescript
+id: uuid (PRIMARY KEY)
+storeid: uuid (FOREIGN KEY → store.id)
+fullname: string
+phone: string
+role: 'owner' | 'manager' | 'seller' | 'accountant'
+passwordhash: text
+active: boolean
+lastloginat: timestamp | null
+createdat: timestamp
+updatedat: timestamp
+deleted_at: timestamp | null
+```
+
+#### TypeScript Type:
+```typescript
+export type User = {
+  id: string
+  storeid: string | null
+  fullname: string
+  phone: string
+  role: 'owner' | 'manager' | 'seller' | 'accountant'
+  passwordhash: string
+  active: boolean
+  lastloginat: Date | null
+  createdat: Date
+  updatedat: Date
+  deleted_at: Date | null
+}
+
+export type UserProfile = Omit<User, 'passwordhash'>
+```
+
+#### DB Layer Priority:
+```
+getCurrentUser(): Promise<UserProfile | null>
+getUsersByStore(storeid: string): Promise<UserProfile[]>
+getUserById(userId: string): Promise<UserProfile>
+updateUserRole(userId: string, role: User['role']): Promise<UserProfile>
+deleteUser(userId: string): Promise<void>
+```
+
+---
+
+## Phase 1B: Master Data (No Dependencies except storeid)
+
+### Table 4: **brand**
+
+#### Schema Columns:
+```typescript
+id: uuid (PRIMARY KEY)
+storeid: uuid (FOREIGN KEY → store.id, NOT NULL)
+name: string
+createdat: timestamp
+deleted_at: timestamp | null
+```
+
+#### TypeScript Type:
+```typescript
+export type Brand = {
+  id: string
+  storeid: string
+  name: string
+  createdat: Date
+  deleted_at: Date | null
+}
+```
+
+#### DB Layer Priority:
+```
+getBrandsByStore(storeid: string): Promise<Brand[]>
+getBrandById(brandId: string): Promise<Brand>
+insertBrand(storeid: string, name: string): Promise<Brand>
+updateBrand(brandId: string, name: string): Promise<Brand>
+deleteBrand(brandId: string): Promise<void>
+```
+
+---
+
+### Table 5: **category**
+
+#### Schema Columns:
+```typescript
+id: uuid (PRIMARY KEY)
+storeid: uuid (FOREIGN KEY → store.id, NOT NULL)
+name: string
+createdat: timestamp
+deleted_at: timestamp | null
+```
+
+#### TypeScript Type:
+```typescript
+export type Category = {
+  id: string
+  storeid: string
+  name: string
+  createdat: Date
+  deleted_at: Date | null
+}
+```
+
+#### DB Layer Priority:
+```
+getCategoriesByStore(storeid: string): Promise<Category[]>
+getCategoryById(categoryId: string): Promise<Category>
+insertCategory(storeid: string, name: string): Promise<Category>
+updateCategory(categoryId: string, name: string): Promise<Category>
+deleteCategory(categoryId: string): Promise<void>
+```
+
+---
+
+### Table 6: **supplier**
+
+#### Schema Columns:
+```typescript
+id: uuid (PRIMARY KEY)
+storeid: uuid (FOREIGN KEY → store.id, NOT NULL)
+name: string
+contact_person: string | null
+phone: string | null
+email: string | null
+address: text | null
+notes: text | null
+active: boolean
+createdat: timestamp
+updatedat: timestamp
+deleted_at: timestamp | null
+```
+
+#### TypeScript Type:
+```typescript
+export type Supplier = {
+  id: string
+  storeid: string
+  name: string
+  contact_person: string | null
+  phone: string | null
+  email: string | null
+  address: string | null
+  notes: string | null
+  active: boolean
+  createdat: Date
+  updatedat: Date
+  deleted_at: Date | null
+}
+```
+
+#### DB Layer Priority:
+```
+getSuppliersByStore(storeid: string): Promise<Supplier[]>
+getSupplierById(supplierId: string): Promise<Supplier>
+insertSupplier(storeid: string, data: Omit<Supplier, 'id' | 'createdat' | 'updatedat' | 'deleted_at'>): Promise<Supplier>
+updateSupplier(supplierId: string, data: Partial<Supplier>): Promise<Supplier>
+deleteSupplier(supplierId: string): Promise<void>
+```
+
+---
+1. Get Current User
+What it does: Fetch authenticated user from Supabase Auth
+DB Layer: lib/db/auth.ts
+- getCurrentUser() → Returns auth.user with store association
+- useAuth hook (ONLY exception to no-hooks rule) - lightweight wrapper
+
+Why first:
+- Every operation needs to know WHO and WHICH STORE
+- Foundation for RLS policies
+```
+
+#### 2. **Store & Store Settings**
+```
+What it does: Manage store profiles and configuration
+DB Layer: lib/db/stores.ts
+- getStoreById(storeid)
+- getStoreSettings(storeid)
+- updateStoreSettings(storeid, settings)
+
+Actions Layer: lib/actions/stores.ts
+- updateStoreAction(formData)
+
+Why second:
+- Store is the tenant
+- Settings are SaaS-specific (subscription tier, features)
+- Users belong to stores
+```
+
+#### 3. **Users Management**
+```
+What it does: Manage store users/employees
+DB Layer: lib/db/users.ts
+- getUsersByStore(storeid)
+- getUserById(userId)
+- updateUserRole(userId, role)
+- deleteUser(userId) [soft delete]
+
+Actions Layer: lib/actions/users.ts
+- inviteUserAction(email, role, storeid)
+- updateUserRoleAction(userId, role)
+
+Important:
+- Only owner can invite users
+- Role-based (owner, manager, seller, accountant)
+- Link to auth.users via email
+- RLS: Users can only see their store's users
+```
+
+---
+
+## Phase 1B: Master Data (Dependencies)
+
+After Auth setup, proceed with master data (can happen in parallel):
+
+#### 4. **Brand**
+```
+What it does: Phone/Accessory brands
+DB Layer: lib/db/brands.ts
+- getBrandsByStore(storeid)
+- getBrandById(brandId)
+- insertBrand(storeid, name)
+- updateBrand(brandId, name)
+- deleteBrand(brandId)
+
+RLS Rule:
+- SELECT/INSERT/UPDATE/DELETE WHERE storeid = auth.user_id (via users table)
+
+Why:
+- Simple, no dependencies except storeid
+- Referenced by Phone and Accessory
+- Good testing ground for RLS
+```
+
+#### 5. **Category**
+```
+Same pattern as Brand
+DB Layer: lib/db/categories.ts
+- CRUD for Accessory categories
+- Filter by storeid
+```
+
+#### 6. **Supplier**
+```
+Same pattern
+DB Layer: lib/db/suppliers.ts
+- Keep simple: name, phone, contact, address
+- No complex logic yet
+## RLS Policies Required
+
+### For Every Table in Phase 1B (brand, category, supplier):
+
+```sql
+-- SELECT Policy
+CREATE POLICY "Users can view their store data"
+ON brand -- (replace with table name)
+FOR SELECT
+USING (
+  storeid IN (
+    SELECT storeid FROM public.users 
+    WHERE id = auth.uid() 
+      AND deleted_at IS NULL
+  )
+);
+
+-- INSERT Policy
+CREATE POLICY "Users can insert in their store"
+ON brand
+FOR INSERT
+WITH CHECK (
+  storeid IN (
+    SELECT storeid FROM public.users 
+    WHERE id = auth.uid() 
+      AND deleted_at IS NULL
+  )
+);
+
+-- UPDATE Policy
+CREATE POLICY "Users can update their store data"
+ON brand
+FOR UPDATE
+USING (
+  storeid IN (
+    SELECT storeid FROM public.users 
+    WHERE id = auth.uid() 
+      AND deleted_at IS NULL
+  )
+)
+WITH CHECK (
+  storeid IN (
+    SELECT storeid FROM public.users 
+    WHERE id = auth.uid() 
+      AND deleted_at IS NULL
+  )
+);
+
+-- DELETE Policy
+CREATE POLICY "Users can soft-delete in their store"
+ON brand
+FOR DELETE
+USING (
+  storeid IN (
+    SELECT storeid FROM public.users 
+    WHERE id = auth.uid() 
+      AND deleted_at IS NULL
+  )
+);
+```
+
+---
+
+## File Structure
+
+```
+lib/
+├─ supabase/
+│  ├─ client.ts (already done)
+│  └─ server.ts (already done)
+├─ db/
+│  ├─ auth.ts (Phase 1A)
+│  ├─ stores.ts (Phase 1A)
+│  ├─ users.ts (Phase 1A)
+│  ├─ brands.ts (Phase 1B)
+│  ├─ categories.ts (Phase 1B)
+│  └─ suppliers.ts (Phase 1B)
+├─ actions/
+│  ├─ auth.ts (Phase 1A)
+│  ├─ stores.ts (Phase 1A)
+│  ├─ users.ts (Phase 1A)
+│  ├─ brands.ts (Phase 1B)
+│  ├─ categories.ts (Phase 1B)
+│  └─ suppliers.ts (Phase 1B)
+└─ types/
+   └─ index.ts (all TypeScript types)
+```
+
+---
+
+Code Structure Template
+lib/db/brands.ts (Example)
+typescript// DB Layer - Query only, no business logic
+
+import { createClient } from '@/lib/supabase/server'
+import { Brand } from '@/types'
+
+export async function getBrandsByStore(storeid: string) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('brand')
+    .select('*')
+    .eq('storeid', storeid)
+    .is('deleted_at', null)
+  
+  if (error) throw error
+  return data as Brand[]
+}
+
+export async function insertBrand(storeid: string, name: string) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('brand')
+    .insert([{ storeid, name }])
+    .select()
+  
+  if (error) throw error
+  return data[0]
+}
+
+// ... getById, update, delete
+lib/actions/brands.ts (Example)
+typescript'use server'
+
+import { revalidatePath } from 'next/cache'
+import * as db from '@/lib/db/brands'
+import { getCurrentUser } from '@/lib/db/auth'
+
+export async function createBrandAction(formData: FormData) {
+  try {
+    const user = await getCurrentUser()
+    if (!user?.store_id) throw new Error('No store access')
+    
+    const name = formData.get('name') as string
+    
+    const brand = await db.insertBrand(user.store_id, name)
+    
+    revalidatePath('/admin/brands')
+    return { success: true, data: brand }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+```
+
+---
+
+## Why This Order Matters
+```
+Auth Setup
+    ↓
+Store (tenant container)
+    ↓
+Users (who accesses what)
+    ↓
+Master Data (Brand, Category, Supplier)
+    ↓
+[ONLY THEN] Inventory Phase (Phase 2)
+    ↓
+Transactions Phase
+
+
+## Critical Rules for This Phase
+
+1. **EVERY query filters by storeid** - Non-negotiable
+2. **No business logic in DB layer** - Just queries
+3. **No validation yet** - Will add in Phase 2
+4. **Soft deletes only** - Set deleted_at, don't actually delete
+5. **getCurrentUser() is crucial** - All operations depend on it
+6. **RLS policies must match** - DB layer logic + RLS = belt and suspenders
+
+---
+
+## Verification Checklist
+
+- [ ] Auth user can only see their store
+- [ ] Auth user can only see their store's brands
+- [ ] Creating brand without storeid fails (RLS blocks)
+- [ ] Creating brand in another's store fails (RLS blocks)
+- [ ] Soft delete works (deleted_at set, record still in DB)
+- [ ] updatedat updated on every change (trigger works)
+- [ ] audit_log records every action (if triggers enabled)
+
+---
+
+## What NOT in Phase 1
+
+❌ Phone table (Phase 2)
+❌ Accessory table (Phase 2)
+❌ Customer table (Phase 2)
+❌ Sale, Purchase, Payment (Phase 2)
+❌ Inventory calculations (Phase 2)
+❌ Subscription checks (Phase 2)
+❌ Email notifications (Phase 3)
+❌ Complex validations (Phase 2)
+
+---
+
+## When You're Ready
+
+Tell me:
+1. Ready for Phase 1A complete code?
+2. Ready for Phase 1B complete code?
+3. Need RLS policy SQL to copy-paste?
+4. Need example component for testing?
