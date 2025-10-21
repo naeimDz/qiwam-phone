@@ -61,6 +61,29 @@ export type AuthUser = {
   role: UserProfile['role']
 }
 
+
+export type SignupFormData = {
+  email: string
+  password: string
+  fullname: string
+  phone: string
+  storeName?: string
+  taxNumber?: string
+}
+
+export type LoginFormData = {
+  email: string
+  password: string
+}
+
+export type AuthResponse = {
+  success: boolean
+  error?: string
+  user?: AuthUser
+  storeid?: string
+}
+
+
 // ==================== Phase 1B Types (Preview) ====================
 export type Brand = {
   id: string

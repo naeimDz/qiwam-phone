@@ -25,6 +25,11 @@ export const colorPalettes: Record<string, ColorPalette> = {
     light: { primary: '#2563EB', accent: '#F59E0B' },
     dark: { primary: '#3B82F6', accent: '#FBB040' }
   },
+  emerald: {
+    name: 'أخضر الزمرد',
+    light: { primary: '#059669', accent: '#F97316' },
+    dark: { primary: '#10B981', accent: '#FB923C' }
+  },
   purple: {
     name: 'بنفسجي عصري',
     light: { primary: '#7C3AED', accent: '#EC4899' },

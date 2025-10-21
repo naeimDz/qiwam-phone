@@ -36,6 +36,7 @@ export default function RootLayout({
                     purple: { light: { primary: '#7C3AED', accent: '#EC4899' }, dark: { primary: '#8B5CF6', accent: '#F472B6' } },
                     teal: { light: { primary: '#0D9488', accent: '#F97316' }, dark: { primary: '#14B8A6', accent: '#FB923C' } },
                     red: { light: { primary: '#DC2626', accent: '#FBBF24' }, dark: { primary: '#EF4444', accent: '#FCD34D' } },
+                    emerald: {light: { primary: '#059669', accent: '#F97316' },dark: { primary: '#10B981', accent: '#FB923C' }},
                     indigo: { light: { primary: '#4F46E5', accent: '#10B981' }, dark: { primary: '#6366F1', accent: '#34D399' } },
                     orange: { light: { primary: '#EA580C', accent: '#8B5CF6' }, dark: { primary: '#F97316', accent: '#A78BFA' } },
                     pink: { light: { primary: '#DB2777', accent: '#06B6D4' }, dark: { primary: '#EC4899', accent: '#22D3EE' } }
