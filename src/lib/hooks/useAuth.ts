@@ -17,21 +17,25 @@ export function useAuth() {
     // Get initial session
     const getInitialSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const { data: { user }, error } = await supabase.auth.getUser()
         
-        if (session?.user) {
+        if (error || !user) {
+          return null
+        }
+        
+        if (user) {
           // Fetch user profile
           const { data: profile } = await supabase
             .from('users')
             .select('id, storeid, fullname, role')
-            .eq('id', session.user.id)
+            .eq('id', user.id)
             .is('deleted_at', null)
             .single()
 
           if (profile) {
             setUser({
               id: profile.id,
-              email: session.user.email ?? null,
+              email: user.email ?? null,
               storeid: profile.storeid,
               fullname: profile.fullname,
               role: profile.role,

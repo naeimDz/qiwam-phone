@@ -1,17 +1,31 @@
 import type { Metadata } from 'next'
 import { ThemeProvider } from '@/lib/theme'
 import './globals.css'
+import { getCurrentUser } from '@/lib/supabase/db/auth'
+import { getCurrentUserAction } from '@/lib/actions/auth'
+import { getStoreWithSettingsAction } from '@/lib/actions/stores'
+import { AuthProvider } from '@/lib/provider/AuthContext'
+import { getStoreWithSettings } from '@/lib/supabase/db/stores'
 
 export const metadata: Metadata = {
   title: 'محل الهواتف - نظام الإدارة',
   description: 'نظام إدارة شامل لمحل الهواتف المحمولة',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+    const user = await getCurrentUser()
+  let store = null
+  let settings = null
+
+  if (user?.storeid) {
+    const data = await getStoreWithSettings(user.storeid)
+    store = data.store
+    settings = data.settings
+  }
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
@@ -63,7 +77,13 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <AuthProvider
+          initialUser={user}
+          initialStore={store}
+          initialSettings={settings}
+        >
+          <ThemeProvider>{children}</ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   )
