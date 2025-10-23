@@ -355,13 +355,13 @@ export default function SettingsPage() {
                           </button>
                         )}
                         
-                        {setting.type === 'select' && (
+                        {setting.type === 'select' && 'options' in setting && (
                           <select
-                            value={setting.value}
+                            value={String(setting.value || '')}
                             onChange={e => updateSetting(setting.id, e.target.value)}
                             className="px-4 py-2 rounded-xl border border-border bg-bg-primary text-text-primary focus:border-primary outline-none min-w-[200px]"
                           >
-                            {setting.options?.map(opt => (
+                            {setting.options?.map((opt: { value: string; label: string }) => (
                               <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
                           </select>
@@ -370,7 +370,7 @@ export default function SettingsPage() {
                         {setting.type === 'number' && (
                           <input
                             type="number"
-                            value={setting.value}
+                            value={Number(setting.value) || 0}
                             onChange={e => updateSetting(setting.id, parseInt(e.target.value) || 0)}
                             className="w-24 px-4 py-2 rounded-xl border border-border bg-bg-primary text-text-primary focus:border-primary outline-none text-center"
                             min="0"
@@ -380,7 +380,7 @@ export default function SettingsPage() {
                         {setting.type === 'text' && (
                           <input
                             type="text"
-                            value={setting.value}
+                            value={String(setting.value || '')}
                             onChange={e => updateSetting(setting.id, e.target.value)}
                             className="w-64 px-4 py-2 rounded-xl border border-border bg-bg-primary text-text-primary focus:border-primary outline-none"
                           />
