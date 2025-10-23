@@ -49,22 +49,23 @@ export async function createAuthMiddleware(request: NextRequest): Promise<Middle
 
 /**
  * Lightweight rules DSL — keep it small and testable.
- * Extend this to use roles, subscriptions, rate limits, etc.
+ * ✅ Protects all routes by default except auth pages
+ * ✅ Protects API routes
  */
 export function createAuthRules() {
-  const protectedPaths = ['/dashboard', '/app', '/profile', '/settings']
   const authPaths = ['/login', '/signup', '/forgot-password']
-  const publicStarts = ['/', '/about', '/pricing']
+  const publicPaths = ['/public']
 
   return {
-    isProtected(path: string) {
-      return protectedPaths.some((p) => path === p || path.startsWith(p + '/'))
-    },
     isAuthPath(path: string) {
       return authPaths.some((p) => path === p || path.startsWith(p + '/'))
     },
-    isPublic(path: string) {
-      return publicStarts.some((p) => path === p || path.startsWith(p + '/'))
+    isPublicPath(path: string) {
+      return publicPaths.some((p) => path === p || path.startsWith(p + '/'))
+    },
+    // ✅ Everything else is protected by default (including /api/*)
+    isProtected(path: string) {
+      return !this.isAuthPath(path) && !this.isPublicPath(path)
     },
   }
 }
