@@ -2,8 +2,6 @@ import type { Metadata } from 'next'
 import { ThemeProvider } from '@/lib/theme'
 import './globals.css'
 import { getCurrentUser } from '@/lib/supabase/db/auth'
-import { getCurrentUserAction } from '@/lib/actions/auth'
-import { getStoreWithSettingsAction } from '@/lib/actions/stores'
 import { AuthProvider } from '@/lib/provider/AuthContext'
 import { getStoreWithSettings } from '@/lib/supabase/db/stores'
 
