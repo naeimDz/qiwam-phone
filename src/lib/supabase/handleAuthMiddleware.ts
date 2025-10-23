@@ -84,9 +84,9 @@ export async function authPipeline(context: MiddlewareContext): Promise<NextResp
     return NextResponse.redirect(destination)
   }
 
-  // 2) If on auth pages (login/signup) but already authed -> go to dashboard
+  // 2) If on auth pages (login/signup) but already authed -> go to home/shop
   if (rules.isAuthPath(pathname) && context.isAuthenticated) {
-    const destination = new URL('/dashboard', context.request.url)
+    const destination = new URL('/', context.request.url)
     return NextResponse.redirect(destination)
   }
 

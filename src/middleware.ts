@@ -9,34 +9,19 @@ import { handleAuthMiddleware } from '@/lib/supabase/handleAuthMiddleware'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // ✅ Public paths that don't need authentication
-  const publicPaths = [
-    '/login',
-    '/signup',
-    '/forgot-password',
-    '/public',
-  ]
-
-  // ✅ Paths that need special handling (still require auth but have different flow)
-  const specialAuthPaths = [
-    '/reset-password', // User must be authenticated to reset password
-  ]
-
-  // ✅ Internal Next.js paths (always allow)
+  // ✅ Internal Next.js paths (always allow without any checks)
   if (pathname.startsWith('/_next') || pathname.startsWith('/api/auth/callback')) {
     return NextResponse.next()
   }
 
-  // ✅ Allow public paths without any auth checks
-  if (publicPaths.some(path => pathname.startsWith(path))) {
-    return NextResponse.next()
-  }
-
-  // ✅ For all other paths (including /api/* and /reset-password):
+  // ✅ For ALL other paths (including auth pages like /login, /signup):
   // 1) Refresh tokens and update cookies
   const refreshResponse = await updateSession(request)
 
-  // 2) Run auth pipeline (checks if user is authenticated)
+  // 2) Run auth pipeline which handles:
+  //    - Redirecting logged-in users away from /login, /signup
+  //    - Redirecting non-logged users to /login when accessing protected routes
+  //    - Allowing public paths for non-authenticated users
   const pipelineResponse = await handleAuthMiddleware(request)
 
   // If pipeline returned a response (redirect or modified), use it
