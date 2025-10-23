@@ -37,25 +37,33 @@ export function AuthProvider({
     user: initialUser,
     store: initialStore,
     settings: initialSettings,
-    loading: !initialUser,
+    loading: !initialUser, // ✅ لا تبدأ بـ true، ابدأ بـ !initialUser
   })
 
   const supabase = useMemo(() => createClientBrowser(), [])
 
   useEffect(() => {
+    // التحقق من الجلسة الحالية
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user && !state.user) {
+        // إعادة تحميل الصفحة للحصول على بيانات المستخدم من الخادم
+        window.location.reload()
+      }
+    }
+
+    checkSession()
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_OUT') {
           setState({ user: null, store: null, settings: null, loading: false })
+          window.location.href = '/login'
         }
 
         if (event === 'SIGNED_IN' && session) {
-          const user = session.user
-          setState((prev) => ({
-            ...prev,
-            user: { id: user.id, email: user.email } as AuthUser,
-            loading: false,
-          }))
+          // إعادة تحميل الصفحة للحصول على بيانات كاملة
+          window.location.reload()
         }
       }
     )
@@ -69,5 +77,3 @@ export function AuthProvider({
     </AuthContext.Provider>
   )
 }
-
-export const useAuth = () => useContext(AuthContext)

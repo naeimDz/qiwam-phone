@@ -1,10 +1,12 @@
-import { updateSession } from '@/lib/supabase/middleware'
+// middleware.ts (ROOT)
 import { NextRequest, NextResponse } from 'next/server'
+import { updateSession } from '@/lib/supabase/updateSession'
+import { handleAuthMiddleware } from '@/lib/supabase/handleAuthMiddleware'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // ✅ السماح بالوصول للصفحات العامة بدون تحقق
+  // السماح بالوصول للصفحات العامة
   if (
     pathname.startsWith('/login') ||
     pathname.startsWith('/signup') ||
@@ -16,25 +18,17 @@ export async function middleware(request: NextRequest) {
   ) {
     return NextResponse.next()
   }
+  // 1) ensure tokens are refreshed and cookies are written
+  const refreshResponse = await updateSession(request)
 
-  // 🔄 تحديث session
-  const response = await updateSession(request)
-  
-  // 🔒 التحقق من وجود access token
-  const accessToken = response.cookies.get('sb-access-token')?.value
+  // 2) run auth pipeline (may redirect or modify cookies)
+  const pipelineResponse = await handleAuthMiddleware(request)
 
-  if (!accessToken) {
-    const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/login'
-    redirectUrl.searchParams.set('redirected', 'true')
-    return NextResponse.redirect(redirectUrl)
-  }
-
-  return response
+  // If pipeline returned a NextResponse (redirect / modified), use it
+  // Otherwise use the refreshResponse (which might include refreshed cookies).
+  return pipelineResponse ?? refreshResponse
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }

@@ -6,7 +6,6 @@ import { FormError } from '../FormError'
 import { FormSuccess } from '../FormSuccess'
 import { InputField } from '../InputField'
 import { SubmitButton } from '../SubmitButton'
-import { signupAction } from '@/lib/actions/auth'
 import { useAuthActions } from '@/lib/hooks/useAuthActions'
 
 interface FormData {
@@ -162,7 +161,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
             </p>
           </div>
           <button 
-            onClick={() => window.location.href = '/dashboard'}
+            onClick={() => window.location.href = '/'}
             className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold rounded-xl hover:shadow-lg transition-all"
           >
             دخول للوحة التحكم

@@ -31,6 +31,8 @@ const LoginPage: React.FC = () => {
       const emailEquivalent = `${phone}@store.com`
       await signIn(emailEquivalent, password)
       setFormSuccess('تم تسجيل الدخول بنجاح!')
+
+      window.location.href = '/'
     } catch (error: any) {
       setFormError(error.message || 'فشل تسجيل الدخول')
     } finally {

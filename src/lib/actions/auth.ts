@@ -140,7 +140,7 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
       return { success: false, error: 'بيانات الدخول غير صحيحة' }
     }
 
-    revalidatePath('/', 'layout')
+    //revalidatePath('/', 'layout')
     return { success: true, data: undefined }
   } catch (error) {
     return { success: false, error: 'حدث خطأ أثناء تسجيل الدخول' }
@@ -271,7 +271,7 @@ export async function signupAction(payload: SignupPayload): Promise<SignupResult
 
     console.log(`[SIGNUP] User created: ${data.user.id} (${payload.email})`)
 
-    revalidatePath('/login', 'page')
+    //revalidatePath('/login', 'page')
     return {
       success: true,
       userId: data.user.id,

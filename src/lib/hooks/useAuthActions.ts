@@ -34,16 +34,16 @@ export function useAuthActions() {
     if (error) throw new Error(error.message)
     if (!data.user) throw new Error('فشل إنشاء الحساب')
 
-    // ✅ انتظار تحديث الكوكيز قبل التحويل
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // انتظار تحديث الكوكيز وإعادة تحميل البيانات
+    await new Promise(resolve => setTimeout(resolve, 1000))
     
-    router.push('/dashboard')
-    router.refresh() // ✅ إجبار تحديث الصفحة
+    // إعادة تحميل الصفحة بدلاً من التحويل
+    window.location.href = '/'
     
     return data
   }
 
-  const signIn = async (email: string, password: string) => {
+   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ 
       email, 
       password 
@@ -52,11 +52,11 @@ export function useAuthActions() {
     if (error) throw new Error('بيانات الدخول غير صحيحة')
     if (!data.session) throw new Error('فشل تسجيل الدخول')
 
-    // ✅ انتظار تحديث الكوكيز
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // انتظار تحديث الكوكيز وإعادة تحميل البيانات
+    await new Promise(resolve => setTimeout(resolve, 1000))
     
-    router.push('/dashboard')
-    router.refresh()
+    // إعادة تحميل الصفحة بدلاً من التحويل
+    window.location.href = '/'
   }
 
   const signOut = async () => {
