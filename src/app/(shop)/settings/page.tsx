@@ -1,74 +1,105 @@
+// app/(shop)/settings/page.tsx
+// ✅ Settings saved to database
+// ✅ No localStorage usage
+// ✅ Uses useAuth for current user
+// ✅ Server actions for save/load
 'use client'
 
 import { useState, useEffect } from 'react'
 import { 
-  Settings, Palette, Store, Bell, Package, DollarSign, 
-  Moon, Sun, Monitor, Check, ChevronDown, Save, RotateCcw
+  Settings, Palette, Store, Bell, Package, 
+  Moon, Sun, Monitor, Check, Save, RotateCcw, Loader2
 } from 'lucide-react'
 import DashboardLayout from '@/components/DashboardLayout'
 import { useTheme } from '@/lib/theme'
-
-
-// أنواع الإعدادات
-type SettingSection = {
-  id: string
-  title: string
-  icon: any
-  settings: Setting[]
-}
-
-type Setting = {
-  id: string
-  label: string
-  description: string
-  type: 'toggle' | 'select' | 'text' | 'number'
-  value: any
-  options?: { value: string; label: string }[]
-}
-
+import { useAuth } from '@/lib/hooks/useAuth'
+import { getStoreSettingsAction, updateStoreSettingsAction } from '@/lib/actions/stores'
+import type { StoreSettings } from '@/lib/types'
 
 export default function SettingsPage() {
-  const { theme, isDark, toggleTheme, changePalette } = useTheme()
+  const { theme, isDark, toggleTheme } = useTheme()
+  const { user, settings: initialSettings, loading: authLoading } = useAuth()
+  
   const [mounted, setMounted] = useState(false)
   const [activeSection, setActiveSection] = useState('general')
   const [hasChanges, setHasChanges] = useState(false)
-  const [showPresets, setShowPresets] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [savedNotification, setSavedNotification] = useState(false)
 
-  // الإعدادات الافتراضية
-  const [settings, setSettings] = useState<Record<string, any>>({
-    // إعدادات عامة
-    shopType: 'retail',
-    priceDisplay: 'full',
-    autoUpdateInventory: true,
-    lowStockAlerts: true,
-    lowStockThreshold: 5,
-    
-    // إعدادات المظهر
-    themeMode: 'light',
-    accentColor: 'blue',
-    showLogo: true,
-    
-    // إعدادات البيع
-    requirePriceInput: true,
-    showProfitCalc: true,
-    enableIMEI: true,
-    enableWarranty: true,
-    
-    // إعدادات الإشعارات
-    notifyLowStock: true,
-    notifyNewOrder: false,
-    notifyDailyReport: true
+  // ✅ Settings from database (not localStorage)
+  const [settings, setSettings] = useState<Partial<StoreSettings>>({
+    invoice_footer: 'شكراً لتعاملكم معنا',
+    receipt_footer: 'نتمنى لكم يوماً سعيداً',
+    phone: '',
+    currency: 'DZD',
+    locale: 'ar-DZ',
+    print_logo: true,
+    print_qr: false,
+    auto_print_invoice: false,
+    notify_low_stock: true,
+    notify_warranty_expiry: true,
+    notify_daily_report: false,
   })
 
+  // ✅ Load settings from database on mount
   useEffect(() => {
     setMounted(true)
-    // تحميل الإعدادات المحفوظة
-    const saved = localStorage.getItem('appSettings')
-    if (saved) {
-      setSettings(JSON.parse(saved))
-    }
+    loadSettings()
   }, [])
+
+  // ✅ Sync with initial settings from context
+  useEffect(() => {
+    if (initialSettings) {
+      setSettings({
+        invoice_footer: initialSettings.invoice_footer,
+        receipt_footer: initialSettings.receipt_footer,
+        phone: initialSettings.phone,
+        tax_number: initialSettings.tax_number,
+        currency: initialSettings.currency,
+        locale: initialSettings.locale,
+        print_logo: initialSettings.print_logo,
+        print_qr: initialSettings.print_qr,
+        auto_print_invoice: initialSettings.auto_print_invoice,
+        notify_low_stock: initialSettings.notify_low_stock,
+        notify_warranty_expiry: initialSettings.notify_warranty_expiry,
+        notify_daily_report: initialSettings.notify_daily_report,
+      })
+      setLoading(false)
+    }
+  }, [initialSettings])
+
+  const loadSettings = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const result = await getStoreSettingsAction()
+      
+      if (result.success && result.data) {
+        setSettings({
+          invoice_footer: result.data.invoice_footer,
+          receipt_footer: result.data.receipt_footer,
+          phone: result.data.phone,
+          tax_number: result.data.tax_number,
+          currency: result.data.currency,
+          locale: result.data.locale,
+          print_logo: result.data.print_logo,
+          print_qr: result.data.print_qr,
+          auto_print_invoice: result.data.auto_print_invoice,
+          notify_low_stock: result.data.notify_low_stock,
+          notify_warranty_expiry: result.data.notify_warranty_expiry,
+          notify_daily_report: result.data.notify_daily_report,
+        })
+      } else {
+        setError(result.error || 'فشل تحميل الإعدادات')
+      }
+    } catch (err: any) {
+      setError(err.message || 'حدث خطأ أثناء تحميل الإعدادات')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   if (!mounted) return null
 
@@ -77,191 +108,108 @@ export default function SettingsPage() {
     setHasChanges(true)
   }
 
-  const saveSettings = () => {
-    localStorage.setItem('appSettings', JSON.stringify(settings))
-    setHasChanges(false)
-    setSavedNotification(true)
-    setTimeout(() => setSavedNotification(false), 3000)
-  }
-
-  const resetSettings = () => {
-    if (confirm('هل أنت متأكد من إعادة تعيين كل الإعدادات؟')) {
-      localStorage.removeItem('appSettings')
-      location.reload()
-    }
-  }
-
-  const applyPreset = (preset: string) => {
-    const presets: Record<string, any> = {
-      retail: {
-        shopType: 'retail',
-        autoUpdateInventory: true,
-        requirePriceInput: true,
-        enableIMEI: false,
-        lowStockThreshold: 5
-      },
-      wholesale: {
-        shopType: 'wholesale',
-        autoUpdateInventory: true,
-        requirePriceInput: false,
-        enableIMEI: false,
-        lowStockThreshold: 20
-      },
-      phones: {
-        shopType: 'phones',
-        autoUpdateInventory: true,
-        requirePriceInput: true,
-        enableIMEI: true,
-        enableWarranty: true,
-        lowStockThreshold: 3
-      },
-      services: {
-        shopType: 'services',
-        autoUpdateInventory: false,
-        requirePriceInput: true,
-        enableIMEI: false,
-        lowStockThreshold: 0
+  const saveSettings = async () => {
+    try {
+      setSaving(true)
+      setError(null)
+      
+      const result = await updateStoreSettingsAction(settings)
+      
+      if (result.success) {
+        setHasChanges(false)
+        setSavedNotification(true)
+        setTimeout(() => setSavedNotification(false), 3000)
+      } else {
+        setError(result.error || 'فشل حفظ الإعدادات')
       }
+    } catch (err: any) {
+      setError(err.message || 'حدث خطأ أثناء حفظ الإعدادات')
+    } finally {
+      setSaving(false)
     }
-    
-    setSettings(prev => ({ ...prev, ...presets[preset] }))
-    setHasChanges(true)
-    setShowPresets(false)
   }
 
-  const sections: SettingSection[] = [
+  const resetSettings = async () => {
+    if (confirm('هل أنت متأكد من إعادة تحميل الإعدادات؟')) {
+      await loadSettings()
+      setHasChanges(false)
+    }
+  }
+
+  // ✅ Settings sections based on actual database schema
+  const sections = [
     {
       id: 'general',
       title: 'الإعدادات العامة',
+      icon: Store,
+      settings: [
+        {
+          id: 'phone',
+          label: 'رقم هاتف المحل',
+          description: 'يظهر في الفواتير والإيصالات',
+          type: 'text',
+          value: settings.phone || ''
+        },
+        {
+          id: 'tax_number',
+          label: 'الرقم الضريبي (NIF)',
+          description: 'إن كان لديك رقم ضريبي',
+          type: 'text',
+          value: settings.tax_number || ''
+        },
+        {
+          id: 'currency',
+          label: 'العملة',
+          description: 'العملة المستخدمة في المحل',
+          type: 'select',
+          value: settings.currency,
+          options: [
+            { value: 'DZD', label: 'دينار جزائري (DZD)' },
+            { value: 'EUR', label: 'يورو (EUR)' },
+            { value: 'USD', label: 'دولار (USD)' }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'printing',
+      title: 'إعدادات الطباعة',
       icon: Settings,
       settings: [
         {
-          id: 'shopType',
-          label: 'نوع نشاطك التجاري',
-          description: 'اختر النشاط الأقرب لطريقة عملك',
-          type: 'select',
-          value: settings.shopType,
-          options: [
-            { value: 'retail', label: '🏬 بيع بالتجزئة' },
-            { value: 'wholesale', label: '🚚 بيع بالجملة' },
-            { value: 'phones', label: '📱 هواتف وإلكترونيات' },
-            { value: 'services', label: '💇‍♂️ خدمات' }
-          ]
+          id: 'invoice_footer',
+          label: 'نص أسفل الفاتورة',
+          description: 'رسالة تظهر أسفل كل فاتورة',
+          type: 'text',
+          value: settings.invoice_footer
         },
         {
-          id: 'priceDisplay',
-          label: 'كيف تحب عرض الأسعار؟',
-          description: 'اختر الطريقة الأسهل في قراءة الأسعار',
-          type: 'select',
-          value: settings.priceDisplay,
-          options: [
-            { value: 'full', label: '36,000 دج' },
-            { value: 'thousands', label: '36 ألف' },
-            { value: 'simplified', label: '36K' }
-          ]
+          id: 'receipt_footer',
+          label: 'نص أسفل الإيصال',
+          description: 'رسالة تظهر أسفل كل إيصال',
+          type: 'text',
+          value: settings.receipt_footer
         },
         {
-          id: 'autoUpdateInventory',
-          label: 'تحديث المخزون تلقائيًا بعد البيع؟',
-          description: 'كل عملية بيع تنقص من المخزون مباشرة',
+          id: 'print_logo',
+          label: 'طباعة الشعار',
+          description: 'إظهار شعار المحل في الفواتير',
           type: 'toggle',
-          value: settings.autoUpdateInventory
-        }
-      ]
-    },
-    {
-      id: 'appearance',
-      title: 'المظهر والشكل',
-      icon: Palette,
-      settings: [
-        {
-          id: 'themeMode',
-          label: 'وضع العرض',
-          description: 'اختر الوضع المريح لعينيك',
-          type: 'select',
-          value: settings.themeMode,
-          options: [
-            { value: 'light', label: '☀️ فاتح' },
-            { value: 'dark', label: '🌙 داكن' },
-            { value: 'auto', label: '🖥️ تلقائي' }
-          ]
+          value: settings.print_logo
         },
         {
-          id: 'accentColor',
-          label: 'اللون الرئيسي',
-          description: 'لون التفاصيل والأزرار',
-          type: 'select',
-          value: settings.accentColor,
-          options: [
-            { value: 'blue', label: '🔵 أزرق' },
-            { value: 'green', label: '🟢 أخضر' },
-            { value: 'purple', label: '🟣 بنفسجي' },
-            { value: 'orange', label: '🟠 برتقالي' },
-            { value: 'red', label: '🔴 أحمر' }
-          ]
+          id: 'print_qr',
+          label: 'طباعة رمز QR',
+          description: 'إضافة رمز QR للفواتير',
+          type: 'toggle',
+          value: settings.print_qr
         },
         {
-          id: 'showLogo',
-          label: 'عرض شعار المتجر',
-          description: 'إظهار شعارك في الواجهة الرئيسية',
+          id: 'auto_print_invoice',
+          label: 'طباعة تلقائية',
+          description: 'طباعة الفاتورة تلقائياً بعد البيع',
           type: 'toggle',
-          value: settings.showLogo
-        }
-      ]
-    },
-    {
-      id: 'inventory',
-      title: 'المخزون والمنتجات',
-      icon: Package,
-      settings: [
-        {
-          id: 'lowStockAlerts',
-          label: 'تنبيهات انخفاض الكمية؟',
-          description: 'تلقي إشعار عندما تنخفض الكمية',
-          type: 'toggle',
-          value: settings.lowStockAlerts
-        },
-        {
-          id: 'lowStockThreshold',
-          label: 'الحد الأدنى للتنبيه',
-          description: 'عدد القطع التي يبدأ بعدها التنبيه',
-          type: 'number',
-          value: settings.lowStockThreshold
-        },
-        {
-          id: 'enableIMEI',
-          label: 'تفعيل حقل IMEI للهواتف؟',
-          description: 'مفيد لتتبع الأجهزة والضمانات',
-          type: 'toggle',
-          value: settings.enableIMEI
-        },
-        {
-          id: 'enableWarranty',
-          label: 'تفعيل حقل الضمان؟',
-          description: 'لتسجيل مدة وتفاصيل الضمان',
-          type: 'toggle',
-          value: settings.enableWarranty
-        }
-      ]
-    },
-    {
-      id: 'sales',
-      title: 'البيع والأرباح',
-      icon: DollarSign,
-      settings: [
-        {
-          id: 'requirePriceInput',
-          label: 'هل تدخل سعر البيع لكل منتج؟',
-          description: 'أو تعتمد على السعر المسجل مسبقًا',
-          type: 'toggle',
-          value: settings.requirePriceInput
-        },
-        {
-          id: 'showProfitCalc',
-          label: 'عرض حساب الأرباح؟',
-          description: 'يظهر الربح المتوقع في كل عملية',
-          type: 'toggle',
-          value: settings.showProfitCalc
+          value: settings.auto_print_invoice
         }
       ]
     },
@@ -271,25 +219,25 @@ export default function SettingsPage() {
       icon: Bell,
       settings: [
         {
-          id: 'notifyLowStock',
+          id: 'notify_low_stock',
           label: 'إشعار عند نفاد المخزون',
           description: 'تلقي تنبيه عندما ينخفض المخزون',
           type: 'toggle',
-          value: settings.notifyLowStock
+          value: settings.notify_low_stock
         },
         {
-          id: 'notifyNewOrder',
-          label: 'إشعار عند طلب جديد',
-          description: 'مفيد إذا كنت تبيع أونلاين',
+          id: 'notify_warranty_expiry',
+          label: 'إشعار انتهاء الضمان',
+          description: 'تنبيه قبل انتهاء ضمان المنتجات',
           type: 'toggle',
-          value: settings.notifyNewOrder
+          value: settings.notify_warranty_expiry
         },
         {
-          id: 'notifyDailyReport',
-          label: 'ملخص يومي',
-          description: 'تقرير بمبيعات وأرباح اليوم',
+          id: 'notify_daily_report',
+          label: 'تقرير يومي',
+          description: 'ملخص بمبيعات وأرباح اليوم',
           type: 'toggle',
-          value: settings.notifyDailyReport
+          value: settings.notify_daily_report
         }
       ]
     }
@@ -300,66 +248,49 @@ export default function SettingsPage() {
   // Toolbar Component
   const Toolbar = (
     <div className="flex items-center gap-3">
-      <button
-        onClick={() => setShowPresets(!showPresets)}
-        className="px-4 py-2 rounded-xl bg-bg-primary border border-border text-text-primary hover:bg-bg-light transition-all text-sm flex items-center gap-2"
-      >
-        <Store className="w-4 h-4" />
-        قوالب جاهزة
-      </button>
+      {error && (
+        <div className="px-4 py-2 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">
+          {error}
+        </div>
+      )}
       
       {hasChanges && (
         <>
           <button
             onClick={resetSettings}
-            className="px-4 py-2 rounded-xl bg-bg-primary border border-border text-text-secondary hover:bg-bg-light transition-all text-sm flex items-center gap-2"
+            disabled={saving}
+            className="px-4 py-2 rounded-xl bg-bg-primary border border-border text-text-secondary hover:bg-bg-light transition-all text-sm flex items-center gap-2 disabled:opacity-50"
           >
             <RotateCcw className="w-4 h-4" />
-            إعادة تعيين
+            إعادة تحميل
           </button>
           
           <button
             onClick={saveSettings}
-            className="px-4 py-2 rounded-xl bg-primary text-white hover:opacity-90 transition-all text-sm flex items-center gap-2"
+            disabled={saving}
+            className="px-4 py-2 rounded-xl bg-primary text-white hover:opacity-90 transition-all text-sm flex items-center gap-2 disabled:opacity-50"
           >
-            <Save className="w-4 h-4" />
-            حفظ التغييرات
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
           </button>
         </>
       )}
     </div>
   )
 
+  // Loading state
+  if (loading) {
+    return (
+      <DashboardLayout toolbar={null}>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   return (
     <DashboardLayout toolbar={Toolbar}>
-
-      {/* Presets Modal */}
-      {showPresets && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowPresets(false)}>
-          <div className="bg-bg-secondary rounded-2xl p-6 max-w-2xl w-full mx-4 border border-border" onClick={e => e.stopPropagation()}>
-            <h2 className="text-lg font-bold text-text-primary mb-4">اختر نمط العمل المناسب</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { id: 'retail', icon: '🏬', title: 'محل تجزئة', desc: 'بيع قطعة بقطعة للزبائن' },
-                { id: 'wholesale', icon: '🚚', title: 'بيع جملة', desc: 'بيع بكميات كبيرة للتجار' },
-                { id: 'phones', icon: '📱', title: 'هواتف وإلكترونيات', desc: 'مع IMEI وضمانات' },
-                { id: 'services', icon: '💇‍♂️', title: 'خدمات', desc: 'صالون، كراج، إلخ' }
-              ].map(preset => (
-                <button
-                  key={preset.id}
-                  onClick={() => applyPreset(preset.id)}
-                  className="p-4 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-all text-right"
-                >
-                  <div className="text-3xl mb-2">{preset.icon}</div>
-                  <div className="font-semibold text-text-primary">{preset.title}</div>
-                  <div className="text-sm text-text-secondary mt-1">{preset.desc}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Saved Notification */}
       {savedNotification && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2 z-50 animate-[slideDown_0.3s_ease]">

@@ -1,11 +1,18 @@
+// lib/hooks/useAuthActions.ts
+// ✅ Unified auth actions using AuthContext
+// ✅ No window.location.reload()
+// ✅ No race conditions with setTimeout
+// ✅ Properly uses router.refresh() for SSR data updates
 'use client'
 
 import { useRouter } from 'next/navigation'
 import { createClientBrowser } from '@/lib/supabase/supabaseClient'
+import { useAuth } from './useAuth'
 
 export function useAuthActions() {
   const router = useRouter()
   const supabase = createClientBrowser()
+  const { refreshUserData, signOut: contextSignOut } = useAuth()
 
   const signup = async ({
     email,
@@ -26,7 +33,7 @@ export function useAuthActions() {
       email,
       password,
       options: {
-        emailRedirectTo: undefined, // ✅ إلغاء تأكيد الإيميل
+        emailRedirectTo: undefined, // ✅ No email confirmation needed
         data: { fullname, phone, storeName, taxNumber },
       },
     })
@@ -34,16 +41,16 @@ export function useAuthActions() {
     if (error) throw new Error(error.message)
     if (!data.user) throw new Error('فشل إنشاء الحساب')
 
-    // انتظار تحديث الكوكيز وإعادة تحميل البيانات
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // ✅ Use router.refresh() to get updated user data from server
+    await refreshUserData()
     
-    // إعادة تحميل الصفحة بدلاً من التحويل
-    window.location.href = '/'
+    // ✅ Navigate to home page after successful signup
+    router.push('/')
     
     return data
   }
 
-   const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ 
       email, 
       password 
@@ -52,18 +59,15 @@ export function useAuthActions() {
     if (error) throw new Error('بيانات الدخول غير صحيحة')
     if (!data.session) throw new Error('فشل تسجيل الدخول')
 
-    // انتظار تحديث الكوكيز وإعادة تحميل البيانات
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // ✅ Use router.refresh() to get updated user data from server
+    await refreshUserData()
     
-    // إعادة تحميل الصفحة بدلاً من التحويل
-    window.location.href = '/'
+    // ✅ Navigate to home page after successful login
+    router.push('/')
   }
 
-  const signOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
-  }
+  // ✅ Use signOut from context (already handles cleanup)
+  const signOut = contextSignOut
 
   return { signup, signIn, signOut }
 }
