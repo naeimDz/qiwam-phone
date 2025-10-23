@@ -1,20 +1,35 @@
-// middleware.ts (ROOT LEVEL)
 import { updateSession } from '@/lib/supabase/middleware'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  // Refresh session tokens
-  const response = await updateSession(request)
-  
-  const pathname = request.nextUrl.pathname
+  const { pathname } = request.nextUrl
 
-  // Allow public routes
-  if (pathname === '/' || pathname.startsWith('/login') || pathname.startsWith('/signup')) {
-    return response
+  // ✅ السماح بالوصول للصفحات العامة بدون تحقق
+  if (
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/reset-password') ||
+    pathname.startsWith('/forgot-password') ||
+    pathname.startsWith('/public') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api')
+  ) {
+    return NextResponse.next()
   }
 
-  // For protected routes, session check is enough
-  // RLS will handle the rest
+  // 🔄 تحديث session
+  const response = await updateSession(request)
+  
+  // 🔒 التحقق من وجود access token
+  const accessToken = response.cookies.get('sb-access-token')?.value
+
+  if (!accessToken) {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/login'
+    redirectUrl.searchParams.set('redirected', 'true')
+    return NextResponse.redirect(redirectUrl)
+  }
+
   return response
 }
 

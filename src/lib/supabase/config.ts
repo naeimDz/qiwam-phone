@@ -1,7 +1,6 @@
 // lib/supabase/config.ts
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 export const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-export const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -14,4 +13,13 @@ export const commonAuthConfig = {
   persistSession: true,
   detectSessionInUrl: true,
   flowType: 'pkce' as const,
+}
+
+
+export const cookieOptions = {
+  name: 'sb-auth-token',
+  lifetime: 60 * 60 * 24 * 7, // 7 days
+  domain: undefined,
+  path: '/',
+  sameSite: 'lax' as const,
 }

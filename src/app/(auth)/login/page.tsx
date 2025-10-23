@@ -1,6 +1,4 @@
-// app/login/page.tsx
 'use client'
-"use client"
 
 import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
@@ -8,64 +6,40 @@ import { FormError } from '../FormError'
 import { FormSuccess } from '../FormSuccess'
 import { InputField } from '../InputField'
 import { SubmitButton } from '../SubmitButton'
-import { signInAction } from '@/lib/actions/auth'
+import { useAuthActions } from '@/lib/hooks/useAuthActions'
 
 const LoginPage: React.FC = () => {
+  const { signIn } = useAuthActions()
   const [showPassword, setShowPassword] = useState(false)
   const [isPending, setIsPending] = useState(false)
   const [formError, setFormError] = useState('')
   const [formSuccess, setFormSuccess] = useState('')
-  
+
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
 
   const handleSubmit = async () => {
     setFormError('')
     setFormSuccess('')
-    
-    // Validation
-    if (!phone.trim()) {
-      setFormError('رقم الهاتف مطلوب')
-      return
-    }
-    
-    if (!password) {
-      setFormError('كلمة السر مطلوبة')
-      return
-    }
+
+    if (!phone.trim()) return setFormError('رقم الهاتف مطلوب')
+    if (!password) return setFormError('كلمة السر مطلوبة')
 
     setIsPending(true)
 
     try {
-      const formData = new FormData()
-      formData.append('phone', `${phone}@store.com`)
-      formData.append('password', password)
-      const result = await signInAction(formData)
-
-      if (!result.success) {
-        setFormError(result.error || 'فشل تسجيل الدخول')
-        setIsPending(false)
-        return
-      }
-
+      const emailEquivalent = `${phone}@store.com`
+      await signIn(emailEquivalent, password)
       setFormSuccess('تم تسجيل الدخول بنجاح!')
-      
-      setTimeout(() => {
-        window.location.href = '/dashboard'
-      }, 1000)
-
-    } catch (error) {
-      console.error('[LOGIN ERROR]', error)
-      setFormError('حصلت مشكلة غير متوقعة')
+    } catch (error: any) {
+      setFormError(error.message || 'فشل تسجيل الدخول')
+    } finally {
       setIsPending(false)
     }
-
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !isPending) {
-      handleSubmit()
-    }
+    if (e.key === 'Enter' && !isPending) handleSubmit()
   }
 
   return (
@@ -77,19 +51,13 @@ const LoginPage: React.FC = () => {
           <div className="inline-block mb-4 p-3 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-2xl">
             <span className="text-4xl">🔐</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            مرحباً بيك مرة أخرى
-          </h1>
-          <p className="text-gray-600">
-            دخل لحسابك وكمل التسيير
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">مرحباً بيك مرة أخرى</h1>
+          <p className="text-gray-600">دخل لحسابك وكمل التسيير</p>
         </div>
 
         {/* Login Form */}
         <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8">
           <div className="space-y-6">
-            
-            {/* Phone Input */}
             <div onKeyPress={handleKeyPress}>
               <InputField
                 label="رقم الهاتف"
@@ -103,7 +71,6 @@ const LoginPage: React.FC = () => {
               />
             </div>
 
-            {/* Password Input */}
             <div className="relative" onKeyPress={handleKeyPress}>
               <InputField
                 label="كلمة السر"
@@ -125,21 +92,15 @@ const LoginPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Forgot Password Link */}
             <div className="text-left">
-              <a 
-                href="/forgot-password" 
-                className="text-sm text-emerald-600 hover:text-emerald-700 hover:underline font-medium"
-              >
+              <a href="/forgot-password" className="text-sm text-emerald-600 hover:text-emerald-700 hover:underline font-medium">
                 نسيت كلمة السر؟
               </a>
             </div>
 
-            {/* Error/Success Messages */}
             {formError && <FormError message={formError} />}
             {formSuccess && <FormSuccess message={formSuccess} />}
 
-            {/* Submit Button */}
             <SubmitButton
               onClick={handleSubmit}
               loadingText="جاري تسجيل الدخول..."
@@ -150,7 +111,6 @@ const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Signup Link */}
         <p className="text-center text-sm text-gray-600 mt-6">
           ما عندكش حساب؟{' '}
           <a href="/signup" className="text-emerald-600 hover:underline font-bold">
@@ -158,7 +118,6 @@ const LoginPage: React.FC = () => {
           </a>
         </p>
 
-        {/* Features */}
         <div className="mt-8 grid grid-cols-3 gap-3">
           {[
             { icon: '⚡', label: 'دخول سريع' },

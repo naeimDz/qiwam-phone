@@ -7,6 +7,7 @@ import { FormSuccess } from '../FormSuccess'
 import { InputField } from '../InputField'
 import { SubmitButton } from '../SubmitButton'
 import { signupAction } from '@/lib/actions/auth'
+import { useAuthActions } from '@/lib/hooks/useAuthActions'
 
 interface FormData {
   fullname: string
@@ -30,7 +31,11 @@ const SignupPage: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string>('')
   const [formSuccess, setFormSuccess] = useState<string>('')
-  
+  const { signup } = useAuthActions()
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+
   // ✅ استخدم useRef للـ formData بدل useState
   const formDataRef = useRef<FormData>({
     fullname: '',
@@ -111,43 +116,25 @@ const SignupPage: React.FC = () => {
     }
   }
 
-  const handleSubmit = async (): Promise<void> => {
-    if (!validateStep(5)) return
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
 
-    setFormError('')
-    setFormSuccess('')
-    setIsPending(true)
-
-    const data = formDataRef.current
-    const finalEmail = data.emailChoice === 'phone' 
-      ? `${data.phone}@temp.dz`
-      : data.email
-
-    const payload = {
-      fullname: data.fullname,
-      phone: data.phone,
-      storeName: data.storeName,
-      email: finalEmail,
-      password: data.password,
-    }
-
+    const form = new FormData(e.currentTarget)
     try {
-      const result = await signupAction(payload)
-
-      if (!result.success) {
-        setFormError(result.error || 'فشل إنشاء الحساب')
-        setIsPending(false)
-        return
-      }
-
-      setFormSuccess('تم إنشاء حسابك بنجاح!')
-      setCurrentStep(6 as StepType)
-      setIsPending(false)
-
-    } catch (error) {
-      console.error('[SIGNUP ERROR]', error)
-      setFormError('حصلت مشكلة غير متوقعة')
-      setIsPending(false)
+      await signup({
+        email: form.get('email') as string,
+        password: form.get('password') as string,
+        fullname: form.get('fullname') as string,
+        phone: form.get('phone') as string,
+        storeName: form.get('storeName') as string,
+        taxNumber: form.get('taxNumber') as string,
+      })
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -464,14 +451,16 @@ const SignupPage: React.FC = () => {
                   التالي ←
                 </button>
               ) : (
-                <SubmitButton
-                  onClick={handleSubmit}
-                  loadingText="جاري إنشاء الحساب..."
-                  className="flex-1"
-                  disabled={isPending}
-                >
-                  إنشاء الحساب ✨
-                </SubmitButton>
+                <form onSubmit={handleSubmit}>
+                  <SubmitButton
+                    type="submit"
+                    loadingText="جاري إنشاء الحساب..."
+                    className="flex-1"
+                    disabled={isPending}
+                  >
+                    إنشاء الحساب ✨
+                  </SubmitButton>
+                </form>
               )}
             </div>
 
