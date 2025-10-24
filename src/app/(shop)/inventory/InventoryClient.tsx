@@ -20,6 +20,7 @@ import DashboardLayout from '@/components/DashboardLayout'
 import { CategoriesBrandsModal, Item } from '@/components/modal/CategoriesBrandsModal'
 import { AddProductModal } from '@/components/modal/AddProductModal'
 import { Brand, Category } from '@/lib/types'
+import { AddAccessoryModal } from '@/components/modal/AddAccessoryModal'
 
 
 // أنواع TypeScript
@@ -459,6 +460,10 @@ export const InventoryClient:React.FC<InventoryClientProps> = ({
         onSubmit={handleAddProduct}
         categories={categories}
       />
+      <AddAccessoryModal 
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={handleAddProduct} categories={[]} suppliers={[]}      />
 
       {/* نافذة إدارة الفئات والعلامات التجارية */}
       <CategoriesBrandsModal
