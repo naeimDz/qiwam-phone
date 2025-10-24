@@ -129,3 +129,76 @@ export type Customer = {
   updatedat: Date
   deleted_at: Date | null
 }
+
+
+export type ProductStatus = 'available' | 'sold' | 'returned' | 'damaged' |  'reserved'
+
+export type Phone = {
+  id: string
+  storeid: string
+  name: string
+  brandid: string | null
+  model: string | null
+  imei: string
+  supplierid: string | null
+  status: ProductStatus
+  buyprice: number
+  sellprice: number
+  warranty_months: number
+  warranty_notes: string | null
+  notes: string | null
+  createdat: Date
+  updatedat: Date
+  deleted_at: Date | null
+}
+
+export type PhoneWithDetails = Phone & {
+  brand_name: string | null
+  supplier_name: string | null
+}
+
+export type Accessory = {
+  id: string
+  storeid: string
+  name: string
+  brandid: string | null
+  categoryid: string | null
+  supplierid: string | null
+  sku: string | null
+  barcode: string | null
+  quantity: number
+  minqty: number
+  buyprice: number
+  sellprice: number
+  active: boolean
+  notes: string | null
+  createdat: Date
+  updatedat: Date
+  deleted_at: Date | null
+}
+
+export type AccessoryWithDetails = Accessory & {
+  brand_name: string | null
+  category_name: string | null
+  supplier_name: string | null
+  is_low_stock: boolean
+}
+
+export type StockMovement = {
+  id: string
+  storeid: string
+  product_type: 'phone' | 'accessory'
+  product_id: string
+  movement_type: 'in' | 'out' | 'adjustment' | 'return'
+  quantity: number
+  source_table: string | null
+  source_id: string | null
+  notes: string | null
+  createdbyid: string
+  createdat: Date
+}
+
+export type StockMovementWithDetails = StockMovement & {
+  product_name: string
+  created_by_name: string
+}
