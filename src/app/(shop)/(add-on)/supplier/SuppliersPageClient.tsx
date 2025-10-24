@@ -2,7 +2,6 @@
 'use client'
 
 import React, { useState } from 'react'
-import { BarChart3, Users } from 'lucide-react'
 import DashboardLayout from '@/components/DashboardLayout'
 import SuppliersClient from './SuppliersClient'
 import { SuppliersAnalytics } from './SuppliersAnalytics'

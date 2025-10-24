@@ -115,3 +115,17 @@ export type Supplier = {
   updatedat: Date
   deleted_at: Date | null
 }
+
+
+export type Customer = {
+  id: string
+  storeid: string
+  fullname: string
+  phone: string | null
+  address: string | null
+  notes: string | null
+  active: boolean
+  createdat: Date
+  updatedat: Date
+  deleted_at: Date | null
+}
