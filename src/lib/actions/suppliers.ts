@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import * as suppliersDb from '@/lib/supabase/db/suppliers'
 import * as authDb from '@/lib/supabase/db/auth'
 import { Supplier } from '@/lib/types'
+import { getAllSuppliersWithAnalytics, getSupplierDebts, getSupplierDebtsByThreshold, getSupplierWithPurchaseCount, getTopSuppliers, SupplierDebt, SupplierWithPurchases, TopSupplier } from '@/lib/supabase/db/suppliers'
 
 type ActionResult<T = void> = 
   | { success: true; data: T }
@@ -74,7 +75,7 @@ export async function createSupplierAction(formData: FormData): Promise<ActionRe
       active: true
     })
 
-    revalidatePath('/admin/suppliers')
+    revalidatePath('/suppliers')
     return { success: true, data: supplier }
   } catch (error: any) {
     return { success: false, error: 'فشل إضافة المورد' }
@@ -178,5 +179,104 @@ export async function deleteSupplierAction(supplierId: string): Promise<ActionRe
     return { success: true, data: undefined }
   } catch (error: any) {
     return { success: false, error: 'فشل حذف المورد' }
+  }
+}
+
+
+/**
+ * Get top suppliers for current store
+ */
+export async function getTopSuppliersAction(limit: number = 10): Promise<ActionResult<TopSupplier[]>> {
+  try {
+    const user = await authDb.getCurrentUser()
+    if (!user?.storeid) {
+      return { success: false, error: 'لا يوجد متجر مرتبط بحسابك' }
+    }
+
+    const suppliers = await getTopSuppliers(user.storeid, limit)
+    return { success: true, data: suppliers }
+  } catch (error: any) {
+    console.error('getTopSuppliersAction error:', error)
+    return { success: false, error: 'فشل تحميل أفضل الموردين' }
+  }
+}
+
+/**
+ * Get all supplier debts
+ */
+export async function getSupplierDebtsAction(): Promise<ActionResult<SupplierDebt[]>> {
+  try {
+    const user = await authDb.getCurrentUser()
+    if (!user?.storeid) {
+      return { success: false, error: 'لا يوجد متجر مرتبط بحسابك' }
+    }
+
+    const debts = await getSupplierDebts(user.storeid)
+    return { success: true, data: debts }
+  } catch (error: any) {
+    console.error('getSupplierDebtsAction error:', error)
+    return { success: false, error: 'فشل تحميل ديون الموردين' }
+  }
+}
+
+/**
+ * Get supplier debts above a threshold
+ */
+export async function getSupplierDebtsByThresholdAction(minDebt: number): Promise<ActionResult<SupplierDebt[]>> {
+  try {
+    const user = await authDb.getCurrentUser()
+    if (!user?.storeid) {
+      return { success: false, error: 'لا يوجد متجر مرتبط بحسابك' }
+    }
+
+    if (minDebt < 0) {
+      return { success: false, error: 'المبلغ يجب أن يكون موجب' }
+    }
+
+    const debts = await getSupplierDebtsByThreshold(user.storeid, minDebt)
+    return { success: true, data: debts }
+  } catch (error: any) {
+    console.error('getSupplierDebtsByThresholdAction error:', error)
+    return { success: false, error: 'فشل تحميل الديون' }
+  }
+}
+
+/**
+ * Get supplier with purchase analytics
+ */
+export async function getSupplierWithPurchasesAction(supplierId: string): Promise<ActionResult<SupplierWithPurchases>> {
+  try {
+    const user = await authDb.getCurrentUser()
+    if (!user?.storeid) {
+      return { success: false, error: 'لا يوجد متجر مرتبط بحسابك' }
+    }
+
+    const supplier = await getSupplierWithPurchaseCount(supplierId)
+    if (!supplier) {
+      return { success: false, error: 'المورد غير موجود' }
+    }
+
+    return { success: true, data: supplier }
+  } catch (error: any) {
+    console.error('getSupplierWithPurchasesAction error:', error)
+    return { success: false, error: 'فشل تحميل بيانات المورد' }
+  }
+}
+
+/**
+ * Get all suppliers with analytics (combined data)
+ */
+export async function getAllSuppliersWithAnalyticsAction(): Promise<ActionResult<any[]>> {
+  try {
+    const user = await authDb.getCurrentUser()
+    if (!user?.storeid) {
+      return { success: false, error: 'لا يوجد متجر مرتبط بحسابك' }
+    }
+
+    const suppliers = await getAllSuppliersWithAnalytics(user.storeid)
+    return { success: true, data: suppliers }
+  } catch (error: any) {
+    console.error('getAllSuppliersWithAnalyticsAction error:', error)
+    return { success: false, error: 'فشل تحميل تحليل الموردين' }
   }
 }
