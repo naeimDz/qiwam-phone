@@ -46,7 +46,7 @@ interface CashRegister {
 interface Payment {
   id: string
   amount: number
-  method: 'cash' | 'card' | 'bank_transfer' | 'mobile_payment'
+  method: 'cash' | 'card' | 'bank' | 'transfer' 
   direction: 'in' | 'out'
   reference?: string
   transactionType: 'sale' | 'purchase' | 'expense'
@@ -114,7 +114,7 @@ export default function CashRegisterPage() {
       {
         id: '3',
         amount: 3000,
-        method: 'cash',
+        method: 'bank',
         direction: 'out',
         transactionType: 'expense',
         transactionId: 'EXP-001',
@@ -125,7 +125,7 @@ export default function CashRegisterPage() {
       {
         id: '4',
         amount: 150000,
-        method: 'cash',
+        method: 'transfer',
         direction: 'out',
         transactionType: 'purchase',
         transactionId: 'PUR-001',
@@ -269,8 +269,8 @@ export default function CashRegisterPage() {
     switch (method) {
       case 'cash': return <Wallet size={18} />
       case 'card': return <CreditCard size={18} />
-      case 'bank_transfer': return <DollarSign size={18} />
-      case 'mobile_payment': return <Smartphone size={18} />
+      case 'bank': return <DollarSign size={18} />
+      case 'transfer': return <Smartphone size={18} />
       default: return <DollarSign size={18} />
     }
   }
@@ -280,8 +280,8 @@ export default function CashRegisterPage() {
     const names: Record<string, string> = {
       cash: 'نقدي',
       card: 'بطاقة',
-      bank_transfer: 'تحويل بنكي',
-      mobile_payment: 'دفع إلكتروني'
+      bank: 'تحويل بنكيِِ_CCP',
+      transfer: 'دفع إلكتروني_BaridiMob'
     }
     return names[method] || method
   }
