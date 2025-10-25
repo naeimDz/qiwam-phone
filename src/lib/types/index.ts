@@ -202,3 +202,119 @@ export type StockMovementWithDetails = StockMovement & {
   product_name: string
   created_by_name: string
 }
+
+export type TransactionStatus = 'draft' | 'posted' | 'cancelled'
+export type SaleType = 'cash' | 'credit'
+export type InvoiceType = 'full_invoice' | 'quick_sale'
+export type PaymentMethod = 'cash' | 'card' | 'bank_transfer' | 'cheque'
+
+// Sale (Invoice Header)
+export type Sale = {
+  id: string
+  storeid: string
+  customerid: string | null
+  docnumber: string | null
+  docdate: Date
+  saletype: SaleType
+  invoice_type: InvoiceType
+  total: number
+  paidamount: number
+  remainingamount: number
+  notes: string | null
+  status: TransactionStatus
+  createdbyid: string | null
+  modifiedbyid: string | null
+  createdat: Date
+  updatedat: Date
+  deleted_at: Date | null
+}
+
+export type SaleWithDetails = Sale & {
+  customer_name: string | null
+  customer_phone: string | null
+  created_by_name: string | null
+  items_count: number
+}
+
+// Sale Item (Invoice Line)
+export type SaleItem = {
+  id: string
+  saleid: string
+  item_type: 'phone' | 'accessory'
+  phone_id: string | null
+  accessory_id: string | null
+  qty: number
+  base_price: number
+  unitprice: number
+  discount: number
+  linetotal: number
+  imei_snapshot: string | null
+  createdat: Date
+}
+
+export type SaleItemWithDetails = SaleItem & {
+  product_name: string
+  brand_name: string | null
+}
+
+// Purchase (Invoice Header)
+export type Purchase = {
+  id: string
+  storeid: string
+  supplierid: string | null
+  docnumber: string | null
+  docdate: Date
+  total: number
+  paidamount: number
+  remainingamount: number
+  status: TransactionStatus
+  notes: string | null
+  createdbyid: string | null
+  modifiedbyid: string | null
+  createdat: Date
+  updatedat: Date
+  deleted_at: Date | null
+}
+
+export type PurchaseWithDetails = Purchase & {
+  supplier_name: string | null
+  supplier_phone: string | null
+  created_by_name: string | null
+  items_count: number
+}
+
+// Purchase Item (Invoice Line)
+export type PurchaseItem = {
+  id: string
+  purchaseid: string
+  item_type: 'phone' | 'accessory'
+  phone_id: string | null
+  accessory_id: string | null
+  qty: number
+  unitprice: number
+  linetotal: number
+  createdat: Date
+}
+
+export type PurchaseItemWithDetails = PurchaseItem & {
+  product_name: string
+  brand_name: string | null
+}
+
+// Cash Movement
+export type CashMovement = {
+  id: string
+  storeid: string
+  movement_type: 'in' | 'out'
+  source_table: string
+  source_id: string | null
+  related_sale: string | null
+  related_purchase: string | null
+  related_expense: string | null
+  amount: number
+  method: PaymentMethod
+  payment_id: string | null
+  createdby: string | null
+  createdat: Date
+  meta: Record<string, any>
+}
