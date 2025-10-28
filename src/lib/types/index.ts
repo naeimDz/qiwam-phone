@@ -296,9 +296,36 @@ export type PurchaseItem = {
   createdat: Date
 }
 
+export type PurchaseInsert = Omit<Purchase, 'id' | 'total' | 'paidamount' | 'remainingamount' | 'docnumber' | 'createdat' | 'updatedat' | 'deleted_at'>
+
 export type PurchaseItemWithDetails = PurchaseItem & {
   product_name: string
   brand_name: string | null
+}
+
+// Payment
+export type Payment = {
+  id: string
+  storeid: string
+  sale_id: string | null
+  purchase_id: string | null
+  expense_id: string | null
+  amount: number
+  method: PaymentMethod
+  direction: 'in' | 'out'
+  reference: string | null
+  register_id: string | null
+  createdbyid: string | null
+  createdat: Date
+}
+
+export type InsertPayment = Omit<Payment, 'id' | 'createdat'>;
+
+// Payment with Details
+export type PaymentWithDetails = Payment & {
+  created_by_name: string | null
+  sale_docnumber: string | null
+  purchase_docnumber: string | null
 }
 
 // Cash Movement
@@ -317,4 +344,52 @@ export type CashMovement = {
   createdby: string | null
   createdat: Date
   meta: Record<string, any>
+}
+
+
+// Cash Register
+export type CashRegister = {
+  id: string
+  storeid: string
+  register_name: string
+  opening_balance: number
+  current_balance: number
+  status: 'open' | 'closed'
+  opened_at: Date
+  opened_by: string
+  closed_at: Date | null
+  closed_by: string | null
+  notes: string | null
+  createdat: Date
+  updatedat: Date
+  deleted_at: Date | null
+}
+
+export type CashRegisterWithDetails = CashRegister & {
+  opened_by_name: string
+  closed_by_name: string | null
+  total_in: number
+  total_out: number
+  expected_balance: number
+  variance: number
+}
+
+// Cash Register Transaction
+export type CashRegisterTransaction = {
+  id: string
+  register_id: string
+  transaction_type: 'in' | 'out' | 'opening' | 'closing'
+  amount: number
+  payment_id: string | null
+  sale_id: string | null
+  purchase_id: string | null
+  expense_id: string | null
+  notes: string | null
+  createdby: string
+  createdat: Date
+}
+
+export type CashRegisterTransactionWithDetails = CashRegisterTransaction & {
+  created_by_name: string
+  reference_number: string | null
 }

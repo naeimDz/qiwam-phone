@@ -23,7 +23,7 @@ export const menuItems: MenuItem[] = [
     id: 'cash-register', 
     label: 'الصندوق', 
     icon: Wallet, 
-    href: '/cash',
+    href: '/cash-register',
     shortcut: 'F8'
   },
   {
