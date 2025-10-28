@@ -4,7 +4,7 @@
 'use client'
 
 import { Lock, Unlock } from 'lucide-react'
-import { CashRegister } from '@/lib/types/types'
+import { CashRegister } from '@/lib/types/index'
 import { PaymentsList } from './PaymentsList'
 
 interface Props {

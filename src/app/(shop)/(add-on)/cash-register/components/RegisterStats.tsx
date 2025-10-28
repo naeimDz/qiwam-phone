@@ -3,7 +3,7 @@
 
 'use client'
 
-import { CashRegister } from '@/lib/types/types'
+import { CashRegister } from '@/lib/types/index'
 import { StatsCard } from '@/components/ui/StatsCard'
 import { Unlock, TrendingUp, FileText } from 'lucide-react'
 

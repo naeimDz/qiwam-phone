@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react'
 import { FileText, TrendingUp, TrendingDown, Clock, User } from 'lucide-react'
-import { Payment } from '@/lib/types/types'
+import { Payment } from '@/lib/types/index'
 // في الواقع: import { getRegisterPayments } from '@/lib/db/payments'
 
 interface Props {
@@ -23,18 +23,27 @@ export function PaymentsList({ registerId }: Props) {
     // Mock data للتوضيح
     const mockPayments: Payment[] = [
       {
-          id: '1',
-          amount: 180000,
-          method: 'cash',
-          direction: 'in',
-          reference: 'SAL-001',
-          createdat: new Date(),
-          sale_id: 'sale1',
-          storeid: 'store1',
-          createdbyid: 'user1',
-          status: 'captured',
-          captured_at: new Date(),
-          is_reconciled: false
+        id: '1',
+        amount: 180000,
+        method: 'cash',
+        direction: 'in',
+        reference: 'SAL-001',
+        createdat: new Date(),
+        sale_id: 'sale1',
+        storeid: 'store1',
+        createdbyid: 'user1',
+        status: 'captured',
+        captured_at: new Date(),
+        is_reconciled: false,
+        purchase_id: null,
+        expense_id: null,
+        register_id: null,
+        cancelled_at: null,
+        cancellation_reason: null,
+        doc_sequence: null,
+        notes: null,
+        reconciled_at: null,
+        reconciled_by: null
       }
     ]
     

@@ -1,8 +1,33 @@
-// lib/db/stores.ts
-// DB Layer - Store and Store Settings queries
+// lib/supabase/db/store.ts
+// DB Layer - Store and Store Settings queries with error handling
 
 import { createClientServer } from '@/lib/supabase'
 import { Store, StoreSettings } from '@/lib/types'
+
+// Error logging utility
+interface ErrorLog {
+  timestamp: string
+  function: string
+  error: any
+  context?: Record<string, any>
+}
+
+const logError = (functionName: string, error: any, context?: Record<string, any>) => {
+  const errorLog: ErrorLog = {
+    timestamp: new Date().toISOString(),
+    function: functionName,
+    error: {
+      message: error?.message,
+      code: error?.code,
+      details: error?.details,
+      hint: error?.hint,
+      status: error?.status
+    },
+    context
+  }
+  console.error(`[${functionName}]`, errorLog)
+  return errorLog
+}
 
 // ==================== Store Operations ====================
 
@@ -10,40 +35,82 @@ import { Store, StoreSettings } from '@/lib/types'
  * Get store by ID
  */
 export async function getStoreById(storeid: string): Promise<Store | null> {
-  const supabase = await createClientServer()
+  const functionName = 'getStoreById'
   
-  const { data, error } = await supabase
-    .from('store')
-    .select('*')
-    .eq('id', storeid)
-    .single()
+  try {
+    if (!storeid) throw new Error('storeid مطلوب')
 
-  if (error) {
-    if (error.code === 'PGRST116') return null // Not found
-    throw error
+    console.log(`[${functionName}] البدء: جلب المتجر ${storeid}`)
+    
+    const supabase = await createClientServer()
+    
+    const { data, error } = await supabase
+      .from('store')
+      .select('*')
+      .eq('id', storeid)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log(`[${functionName}] المتجر غير موجود`)
+        return null
+      }
+      logError(functionName, error, { storeid })
+      throw error
+    }
+
+    if (!data) {
+      console.log(`[${functionName}] بيانات المتجر فارغة`)
+      return null
+    }
+
+    console.log(`[${functionName}] تم بنجاح`)
+    return data
+  } catch (error: any) {
+    logError(functionName, error, { storeid })
+    throw new Error(`فشل في جلب المتجر: ${error?.message || 'خطأ غير معروف'}`)
   }
-  
-  return data
 }
 
 /**
  * Check if store is active and within subscription period
  */
 export async function isStoreActive(storeid: string): Promise<boolean> {
-  const store = await getStoreById(storeid)
-  if (!store) return false
+  const functionName = 'isStoreActive'
   
-  // Check if active flag is true
-  if (!store.active) return false
-  
-  // Check if within subscription period (if enddate exists)
-  if (store.enddate) {
-    const now = new Date()
-    const endDate = new Date(store.enddate)
-    if (now > endDate) return false
+  try {
+    if (!storeid) throw new Error('storeid مطلوب')
+
+    console.log(`[${functionName}] البدء: فحص حالة المتجر ${storeid}`)
+    
+    const store = await getStoreById(storeid)
+    if (!store) {
+      console.log(`[${functionName}] المتجر غير موجود`)
+      return false
+    }
+    
+    // Check if active flag is true
+    if (!store.active) {
+      console.log(`[${functionName}] المتجر معطل`)
+      return false
+    }
+    
+    // Check if within subscription period
+    if (store.enddate) {
+      const now = new Date()
+      const endDate = new Date(store.enddate)
+      if (now > endDate) {
+        console.log(`[${functionName}] الاشتراك منتهي`)
+        return false
+      }
+    }
+    
+    console.log(`[${functionName}] تم بنجاح: المتجر نشط`)
+    return true
+  } catch (error: any) {
+    logError(functionName, error, { storeid })
+    throw new Error(`فشل في فحص حالة المتجر: ${error?.message || 'خطأ غير معروف'}`)
   }
-  
-  return true
 }
 
 // ==================== Store Settings Operations ====================
@@ -52,88 +119,170 @@ export async function isStoreActive(storeid: string): Promise<boolean> {
  * Get store settings
  */
 export async function getStoreSettings(storeid: string): Promise<StoreSettings | null> {
-  const supabase = await createClientServer()
+  const functionName = 'getStoreSettings'
   
-  const { data, error } = await supabase
-    .from('store_settings')
-    .select('*')
-    .eq('storeid', storeid)
-    .is('deleted_at', null)
-    .single()
+  try {
+    if (!storeid) throw new Error('storeid مطلوب')
 
-  if (error) {
-    if (error.code === 'PGRST116') return null // Not found
-    throw error
+    console.log(`[${functionName}] البدء: جلب إعدادات المتجر ${storeid}`)
+    
+    const supabase = await createClientServer()
+    
+    const { data, error } = await supabase
+      .from('store_settings')
+      .select('*')
+      .eq('storeid', storeid)
+      .is('deleted_at', null)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log(`[${functionName}] الإعدادات غير موجودة`)
+        return null
+      }
+      logError(functionName, error, { storeid })
+      throw error
+    }
+
+    if (!data) {
+      console.log(`[${functionName}] بيانات الإعدادات فارغة`)
+      return null
+    }
+
+    console.log(`[${functionName}] تم بنجاح`)
+    return data
+  } catch (error: any) {
+    logError(functionName, error, { storeid })
+    throw new Error(`فشل في جلب الإعدادات: ${error?.message || 'خطأ غير معروف'}`)
   }
-  
-  return data
 }
 
 /**
  * Update store settings
+ * Triggers: تحديث audit_log عند تغيير الإعدادات
  */
 export async function updateStoreSettings(
-  storeid: string, 
+  storeid: string,
   updates: Partial<Omit<StoreSettings, 'storeid' | 'createdat' | 'updatedat' | 'deleted_at'>>
 ): Promise<StoreSettings> {
-  const supabase = await createClientServer()
+  const functionName = 'updateStoreSettings'
   
-  const { data, error } = await supabase
-    .from('store_settings')
-    .update({
-      ...updates,
-      updatedat: new Date().toISOString()
-    })
-    .eq('storeid', storeid)
-    .is('deleted_at', null)
-    .select('*')
-    .single()
+  try {
+    if (!storeid) throw new Error('storeid مطلوب')
+    if (!updates || Object.keys(updates).length === 0) throw new Error('لا توجد تحديثات')
 
-  if (error) throw error
-  return data
+    console.log(`[${functionName}] البدء: تحديث الإعدادات للمتجر ${storeid}`)
+    
+    const supabase = await createClientServer()
+    
+    const { data, error } = await supabase
+      .from('store_settings')
+      .update({
+        ...updates,
+        updatedat: new Date().toISOString()
+      })
+      .eq('storeid', storeid)
+      .is('deleted_at', null)
+      .select('*')
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new Error('الإعدادات غير موجودة أو محذوفة')
+      }
+      logError(functionName, error, { storeid, updates })
+      throw error
+    }
+
+    if (!data) {
+      throw new Error('فشل في إرجاع الإعدادات المُحدّثة')
+    }
+
+    console.log(`[${functionName}] تم بنجاح`)
+    return data
+  } catch (error: any) {
+    logError(functionName, error, { storeid, updates })
+    throw new Error(`فشل في تحديث الإعدادات: ${error?.message || 'خطأ غير معروف'}`)
+  }
 }
 
 /**
  * Create initial store settings (called on store creation)
  */
 export async function createStoreSettings(storeid: string): Promise<StoreSettings> {
-  const supabase = await createClientServer()
+  const functionName = 'createStoreSettings'
   
-  const defaultSettings = {
-    storeid,
-    invoice_footer: 'شكراً لتعاملكم معنا',
-    receipt_footer: 'نتمنى لكم يوماً سعيداً',
-    phone: '',
-    tax_number: null,
-    logo_url: null,
-    currency: 'DZD' as const,
-    locale: 'ar-DZ' as const,
-    print_logo: true,
-    print_qr: false,
-    auto_print_invoice: false,
-    notify_low_stock: true,
-    notify_warranty_expiry: true,
-    notify_daily_report: false,
-  }
-  
-  const { data, error } = await supabase
-    .from('store_settings')
-    .insert([defaultSettings])
-    .select('*')
-    .single()
+  try {
+    if (!storeid) throw new Error('storeid مطلوب')
 
-  if (error) throw error
-  return data
+    console.log(`[${functionName}] البدء: إنشاء إعدادات افتراضية للمتجر ${storeid}`)
+    
+    const defaultSettings = {
+      storeid,
+      invoice_footer: 'شكراً لتعاملكم معنا',
+      receipt_footer: 'نتمنى لكم يوماً سعيداً',
+      phone: '',
+      tax_number: null,
+      logo_url: null,
+      currency: 'DZD' as const,
+      locale: 'ar-DZ' as const,
+      print_logo: true,
+      print_qr: false,
+      auto_print_invoice: false,
+      notify_low_stock: true,
+      notify_warranty_expiry: true,
+      notify_daily_report: false,
+    }
+    
+    const supabase = await createClientServer()
+    
+    const { data, error } = await supabase
+      .from('store_settings')
+      .insert([defaultSettings])
+      .select('*')
+      .single()
+
+    if (error) {
+      logError(functionName, error, { storeid })
+      throw error
+    }
+
+    if (!data) {
+      throw new Error('فشل في إرجاع الإعدادات المُنشأة')
+    }
+
+    console.log(`[${functionName}] تم بنجاح`)
+    return data
+  } catch (error: any) {
+    logError(functionName, error, { storeid })
+    throw new Error(`فشل في إنشاء الإعدادات: ${error?.message || 'خطأ غير معروف'}`)
+  }
 }
 
 /**
  * Get store with settings (combined query)
  */
 export async function getStoreWithSettings(storeid: string) {
-  const [store, settings] = await Promise.all([
-    getStoreById(storeid),
-    getStoreSettings(storeid)
-  ])
+  const functionName = 'getStoreWithSettings'
   
-  return { store, settings }
+  try {
+    if (!storeid) throw new Error('storeid مطلوب')
+
+    console.log(`[${functionName}] البدء: جلب المتجر والإعدادات`)
+    
+    const [store, settings] = await Promise.all([
+      getStoreById(storeid),
+      getStoreSettings(storeid)
+    ])
+    
+    if (!store) {
+      throw new Error('المتجر غير موجود')
+    }
+
+    console.log(`[${functionName}] تم بنجاح`)
+    return { store, settings }
+  } catch (error: any) {
+    logError(functionName, error, { storeid })
+    throw new Error(`فشل في جلب بيانات المتجر: ${error?.message || 'خطأ غير معروف'}`)
+  }
 }

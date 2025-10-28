@@ -1,5 +1,5 @@
 // lib/supabase/db/suppliers.ts
-// DB Layer - Supplier queries only, no business logic
+// DB Layer - Supplier queries with detailed error handling
 
 import { createClientServer } from '@/lib/supabase'
 import { Supplier } from '@/lib/types'
@@ -7,151 +7,330 @@ import { Supplier } from '@/lib/types'
 type SupplierInsert = Omit<Supplier, 'id' | 'createdat' | 'updatedat' | 'deleted_at'>
 type SupplierUpdate = Partial<Omit<Supplier, 'id' | 'storeid' | 'createdat' | 'updatedat' | 'deleted_at'>>
 
+// Error logging utility
+interface ErrorLog {
+  timestamp: string
+  function: string
+  error: any
+  context?: Record<string, any>
+}
+
+const logError = (functionName: string, error: any, context?: Record<string, any>) => {
+  const errorLog: ErrorLog = {
+    timestamp: new Date().toISOString(),
+    function: functionName,
+    error: {
+      message: error?.message,
+      code: error?.code,
+      details: error?.details,
+      hint: error?.hint,
+      status: error?.status
+    },
+    context
+  }
+  console.error(`[${functionName}]`, errorLog)
+  return errorLog
+}
+
 /**
  * Get all suppliers for a store (tenant-isolated)
  */
-export async function getSuppliersByStore(storeid: string, activeOnly: boolean = false): Promise<Supplier[]> {
-  const supabase = await createClientServer()
+export async function getSuppliersByStore(
+  storeid: string,
+  activeOnly: boolean = false
+): Promise<Supplier[]> {
+  const functionName = 'getSuppliersByStore'
   
-  let query = supabase
-    .from('supplier')
-    .select('*')
-    .eq('storeid', storeid)
-    .is('deleted_at', null)
+  try {
+    if (!storeid) throw new Error('storeid مطلوب')
 
-  if (activeOnly) {
-    query = query.eq('active', true)
+    console.log(`[${functionName}] البدء: جلب الموردين للمتجر ${storeid}`, { activeOnly })
+    
+    const supabase = await createClientServer()
+    
+    let query = supabase
+      .from('supplier')
+      .select('*')
+      .eq('storeid', storeid)
+      .is('deleted_at', null)
+
+    if (activeOnly) {
+      query = query.eq('active', true)
+    }
+
+    const { data, error } = await query.order('name', { ascending: true })
+
+    if (error) {
+      logError(functionName, error, { storeid, activeOnly })
+      throw error
+    }
+
+    if (!data) {
+      console.log(`[${functionName}] لا توجد بيانات`)
+      return []
+    }
+
+    console.log(`[${functionName}] تم بنجاح: ${data.length} مورد`)
+    return data
+  } catch (error: any) {
+    logError(functionName, error, { storeid, activeOnly })
+    throw new Error(`فشل في جلب الموردين: ${error?.message || 'خطأ غير معروف'}`)
   }
-
-  const { data, error } = await query.order('name', { ascending: true })
-
-  if (error) throw error
-  return data
 }
 
 /**
  * Get supplier by ID
  */
 export async function getSupplierById(supplierId: string): Promise<Supplier | null> {
-  const supabase = await createClientServer()
+  const functionName = 'getSupplierById'
   
-  const { data, error } = await supabase
-    .from('supplier')
-    .select('*')
-    .eq('id', supplierId)
-    .is('deleted_at', null)
-    .single()
+  try {
+    if (!supplierId) throw new Error('supplierId مطلوب')
 
-  if (error) {
-    if (error.code === 'PGRST116') return null // Not found
-    throw error
+    console.log(`[${functionName}] البدء: جلب المورد ${supplierId}`)
+    
+    const supabase = await createClientServer()
+    
+    const { data, error } = await supabase
+      .from('supplier')
+      .select('*')
+      .eq('id', supplierId)
+      .is('deleted_at', null)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log(`[${functionName}] المورد غير موجود`)
+        return null
+      }
+      logError(functionName, error, { supplierId })
+      throw error
+    }
+
+    if (!data) {
+      console.log(`[${functionName}] بيانات المورد فارغة`)
+      return null
+    }
+
+    console.log(`[${functionName}] تم بنجاح`)
+    return data
+  } catch (error: any) {
+    logError(functionName, error, { supplierId })
+    throw new Error(`فشل في جلب المورد: ${error?.message || 'خطأ غير معروف'}`)
   }
-  
-  return data
 }
 
 /**
  * Insert new supplier
+ * Triggers: تحديث audit_log
  */
 export async function insertSupplier(data: SupplierInsert): Promise<Supplier> {
-  const supabase = await createClientServer()
+  const functionName = 'insertSupplier'
   
-  const { data: supplier, error } = await supabase
-    .from('supplier')
-    .insert([data])
-    .select('*')
-    .single()
+  try {
+    if (!data.storeid) throw new Error('storeid مطلوب')
+    if (!data.name) throw new Error('اسم المورد مطلوب')
 
-  if (error) throw error
-  return supplier
+    console.log(`[${functionName}] البدء: إضافة مورد جديد`, { name: data.name })
+    
+    const supabase = await createClientServer()
+    
+    const { data: supplier, error } = await supabase
+      .from('supplier')
+      .insert([{
+        ...data,
+        active: data.active !== false
+      }])
+      .select('*')
+      .single()
+
+    if (error) {
+      logError(functionName, error, { data })
+      throw error
+    }
+
+    if (!supplier) {
+      throw new Error('فشل في إرجاع المورد المُضاف')
+    }
+
+    console.log(`[${functionName}] تم بنجاح: المورد ${supplier.id}`)
+    return supplier
+  } catch (error: any) {
+    logError(functionName, error, { data })
+    throw new Error(`فشل في إضافة المورد: ${error?.message || 'خطأ غير معروف'}`)
+  }
 }
 
 /**
- * Update supplier
+ * Update supplier details
+ * Triggers: تحديث audit_log
  */
 export async function updateSupplier(supplierId: string, updates: SupplierUpdate): Promise<Supplier> {
-  const supabase = await createClientServer()
+  const functionName = 'updateSupplier'
   
-  const { data, error } = await supabase
-    .from('supplier')
-    .update({
-      ...updates,
-      updatedat: new Date().toISOString()
-    })
-    .eq('id', supplierId)
-    .is('deleted_at', null)
-    .select('*')
-    .single()
+  try {
+    if (!supplierId) throw new Error('supplierId مطلوب')
+    if (!updates || Object.keys(updates).length === 0) throw new Error('لا توجد تحديثات')
 
-  if (error) throw error
-  return data
+    console.log(`[${functionName}] البدء: تحديث المورد ${supplierId}`, updates)
+    
+    const supabase = await createClientServer()
+    
+    const { data, error } = await supabase
+      .from('supplier')
+      .update({
+        ...updates,
+        updatedat: new Date().toISOString()
+      })
+      .eq('id', supplierId)
+      .is('deleted_at', null)
+      .select('*')
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new Error('المورد غير موجود أو محذوف')
+      }
+      logError(functionName, error, { supplierId, updates })
+      throw error
+    }
+
+    if (!data) {
+      throw new Error('فشل في إرجاع المورد المُحدّث')
+    }
+
+    console.log(`[${functionName}] تم بنجاح`)
+    return data
+  } catch (error: any) {
+    logError(functionName, error, { supplierId, updates })
+    throw new Error(`فشل في تحديث المورد: ${error?.message || 'خطأ غير معروف'}`)
+  }
 }
 
 /**
  * Soft delete supplier
  */
 export async function deleteSupplier(supplierId: string): Promise<void> {
-  const supabase = await createClientServer()
+  const functionName = 'deleteSupplier'
   
-  const { error } = await supabase
-    .from('supplier')
-    .update({ 
-      deleted_at: new Date().toISOString(),
-      updatedat: new Date().toISOString()
-    })
-    .eq('id', supplierId)
+  try {
+    if (!supplierId) throw new Error('supplierId مطلوب')
 
-  if (error) throw error
+    console.log(`[${functionName}] البدء: حذف المورد ${supplierId}`)
+    
+    const supabase = await createClientServer()
+    
+    const { error } = await supabase
+      .from('supplier')
+      .update({ 
+        deleted_at: new Date().toISOString(),
+        updatedat: new Date().toISOString()
+      })
+      .eq('id', supplierId)
+
+    if (error) {
+      logError(functionName, error, { supplierId })
+      throw error
+    }
+
+    console.log(`[${functionName}] تم بنجاح: المورد ${supplierId} محذوف`)
+  } catch (error: any) {
+    logError(functionName, error, { supplierId })
+    throw new Error(`فشل في حذف المورد: ${error?.message || 'خطأ غير معروف'}`)
+  }
 }
 
 /**
  * Toggle supplier active status
  */
 export async function toggleSupplierActive(supplierId: string, active: boolean): Promise<Supplier> {
-  const supabase = await createClientServer()
+  const functionName = 'toggleSupplierActive'
   
-  const { data, error } = await supabase
-    .from('supplier')
-    .update({ 
-      active,
-      updatedat: new Date().toISOString()
-    })
-    .eq('id', supplierId)
-    .is('deleted_at', null)
-    .select('*')
-    .single()
+  try {
+    if (!supplierId) throw new Error('supplierId مطلوب')
 
-  if (error) throw error
-  return data
+    console.log(`[${functionName}] البدء: تحديث حالة المورد ${supplierId} إلى ${active}`)
+    
+    const supabase = await createClientServer()
+    
+    const { data, error } = await supabase
+      .from('supplier')
+      .update({ 
+        active,
+        updatedat: new Date().toISOString()
+      })
+      .eq('id', supplierId)
+      .is('deleted_at', null)
+      .select('*')
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new Error('المورد غير موجود أو محذوف')
+      }
+      logError(functionName, error, { supplierId, active })
+      throw error
+    }
+
+    if (!data) {
+      throw new Error('فشل في إرجاع المورد المُحدّث')
+    }
+
+    console.log(`[${functionName}] تم بنجاح`)
+    return data
+  } catch (error: any) {
+    logError(functionName, error, { supplierId, active })
+    throw new Error(`فشل في تحديث حالة المورد: ${error?.message || 'خطأ غير معروف'}`)
+  }
 }
 
 /**
  * Check if supplier name exists in store (for validation)
  */
-export async function supplierNameExists(storeid: string, name: string, excludeId?: string): Promise<boolean> {
-  const supabase = await createClientServer()
+export async function supplierNameExists(
+  storeid: string,
+  name: string,
+  excludeId?: string
+): Promise<boolean> {
+  const functionName = 'supplierNameExists'
   
-  let query = supabase
-    .from('supplier')
-    .select('id')
-    .eq('storeid', storeid)
-    .eq('name', name)
-    .is('deleted_at', null)
+  try {
+    if (!storeid) throw new Error('storeid مطلوب')
+    if (!name) throw new Error('اسم المورد مطلوب')
 
-  if (excludeId) {
-    query = query.neq('id', excludeId)
+    console.log(`[${functionName}] البدء: فحص تكرار الاسم "${name}"`)
+    
+    const supabase = await createClientServer()
+    
+    let query = supabase
+      .from('supplier')
+      .select('id', { count: 'exact', head: true })
+      .eq('storeid', storeid)
+      .eq('name', name)
+      .is('deleted_at', null)
+
+    if (excludeId) {
+      query = query.neq('id', excludeId)
+    }
+
+    const { error, count } = await query
+
+    if (error) {
+      logError(functionName, error, { storeid, name })
+      throw error
+    }
+
+    const exists = (count || 0) > 0
+    console.log(`[${functionName}] تم بنجاح: الاسم موجود = ${exists}`)
+    return exists
+  } catch (error: any) {
+    logError(functionName, error, { storeid, name, excludeId })
+    throw new Error(`فشل في فحص اسم المورد: ${error?.message || 'خطأ غير معروف'}`)
   }
-
-  const { data, error } = await query
-
-  if (error) throw error
-  return data.length > 0
 }
 
-
-
 /**
- * Top suppliers view - أفضل الموردين (مرتبة حسب عدد الفواتير والمبيعات)
+ * Top suppliers view - أفضل الموردين
  */
 export interface TopSupplier {
   id: string
@@ -165,21 +344,43 @@ export interface TopSupplier {
 }
 
 export async function getTopSuppliers(storeid: string, limit: number = 10): Promise<TopSupplier[]> {
-  const supabase = await createClientServer()
+  const functionName = 'getTopSuppliers'
   
-  const { data, error } = await supabase
-    .from('v_top_suppliers')
-    .select('*')
-    //.eq('storeid', storeid)
-    .order('total_purchases', { ascending: false })
-    .limit(limit)
+  try {
+    if (!storeid) throw new Error('storeid مطلوب')
+    if (limit < 1) throw new Error('الحد يجب أن يكون أكبر من 0')
 
-  if (error) throw error
-  return data || []
+    console.log(`[${functionName}] البدء: جلب أفضل ${limit} مورد`)
+    
+    const supabase = await createClientServer()
+    
+    const { data, error } = await supabase
+      .from('v_top_suppliers')
+      .select('*')
+      .eq('storeid', storeid)
+      .order('total_purchase_amount', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      logError(functionName, error, { storeid, limit })
+      throw error
+    }
+
+    if (!data) {
+      console.log(`[${functionName}] لا توجد بيانات`)
+      return []
+    }
+
+    console.log(`[${functionName}] تم بنجاح: ${data.length} مورد`)
+    return data
+  } catch (error: any) {
+    logError(functionName, error, { storeid, limit })
+    throw new Error(`فشل في جلب أفضل الموردين: ${error?.message || 'خطأ غير معروف'}`)
+  }
 }
 
 /**
- * Supplier debts view - ديون الموردين (كم عندهم ديون معلقة)
+ * Supplier debts view - ديون الموردين
  */
 export interface SupplierDebt {
   id: string
@@ -193,37 +394,83 @@ export interface SupplierDebt {
 }
 
 export async function getSupplierDebts(storeid: string): Promise<SupplierDebt[]> {
-  const supabase = await createClientServer()
+  const functionName = 'getSupplierDebts'
   
-  const { data, error } = await supabase
-    .from('v_supplier_debts')
-    .select('*')
-    //.eq('storeid', storeid)
-    .order('total_debt', { ascending: false })
+  try {
+    if (!storeid) throw new Error('storeid مطلوب')
 
-  if (error) throw error
-  return data || []
+    console.log(`[${functionName}] البدء: جلب ديون الموردين`)
+    
+    const supabase = await createClientServer()
+    
+    const { data, error } = await supabase
+      .from('v_supplier_debts')
+      .select('*')
+      .eq('storeid', storeid)
+      .order('total_debt', { ascending: false })
+
+    if (error) {
+      logError(functionName, error, { storeid })
+      throw error
+    }
+
+    if (!data) {
+      console.log(`[${functionName}] لا توجد بيانات`)
+      return []
+    }
+
+    console.log(`[${functionName}] تم بنجاح: ${data.length} مورد مدين`)
+    return data
+  } catch (error: any) {
+    logError(functionName, error, { storeid })
+    throw new Error(`فشل في جلب ديون الموردين: ${error?.message || 'خطأ غير معروف'}`)
+  }
 }
 
 /**
- * Supplier debts by status - ديون معينة (مثلاً الديون الكبيرة فوق مبلغ معين)
+ * Get supplier debts above a threshold
  */
-export async function getSupplierDebtsByThreshold(storeid: string, minDebt: number): Promise<SupplierDebt[]> {
-  const supabase = await createClientServer()
+export async function getSupplierDebtsByThreshold(
+  storeid: string,
+  minDebt: number
+): Promise<SupplierDebt[]> {
+  const functionName = 'getSupplierDebtsByThreshold'
   
-  const { data, error } = await supabase
-    .from('v_supplier_debts')
-    .select('*')
-    //.eq('storeid', storeid)
-    .gte('total_debt', minDebt)
-    .order('total_debt', { ascending: false })
+  try {
+    if (!storeid) throw new Error('storeid مطلوب')
+    if (minDebt < 0) throw new Error('الحد الأدنى يجب أن يكون موجب')
 
-  if (error) throw error
-  return data || []
+    console.log(`[${functionName}] البدء: جلب الديون فوق ${minDebt}`)
+    
+    const supabase = await createClientServer()
+    
+    const { data, error } = await supabase
+      .from('v_supplier_debts')
+      .select('*')
+      .eq('storeid', storeid)
+      .gte('total_debt', minDebt)
+      .order('total_debt', { ascending: false })
+
+    if (error) {
+      logError(functionName, error, { storeid, minDebt })
+      throw error
+    }
+
+    if (!data) {
+      console.log(`[${functionName}] لا توجد بيانات`)
+      return []
+    }
+
+    console.log(`[${functionName}] تم بنجاح: ${data.length} مورد`)
+    return data
+  } catch (error: any) {
+    logError(functionName, error, { storeid, minDebt })
+    throw new Error(`فشل في جلب الديون: ${error?.message || 'خطأ غير معروف'}`)
+  }
 }
 
 /**
- * Get supplier with purchase details (من الـ DB function اللي كاين)
+ * Get supplier with purchase details
  */
 export interface SupplierWithPurchases {
   id: string
@@ -243,67 +490,111 @@ export interface SupplierWithPurchases {
 }
 
 export async function getSupplierWithPurchaseCount(supplierId: string): Promise<SupplierWithPurchases | null> {
-  const supabase = await createClientServer()
+  const functionName = 'getSupplierWithPurchaseCount'
   
-  const { data, error } = await supabase
-    .from('supplier')
-    .select('*')
-    .eq('id', supplierId)
-    .is('deleted_at', null)
-    .single()
+  try {
+    if (!supplierId) throw new Error('supplierId مطلوب')
 
-  if (error) {
-    if (error.code === 'PGRST116') return null
-    throw error
-  }
+    console.log(`[${functionName}] البدء: جلب المورد مع عد الفواتير ${supplierId}`)
+    
+    const supabase = await createClientServer()
+    
+    const { data, error } = await supabase
+      .from('supplier')
+      .select('*')
+      .eq('id', supplierId)
+      .is('deleted_at', null)
+      .single()
 
-  const supplier = data
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log(`[${functionName}] المورد غير موجود`)
+        return null
+      }
+      logError(functionName, error, { supplierId })
+      throw error
+    }
 
-  // Count active purchases with remaining amount
-  const { data: purchases, error: purchaseError } = await supabase
-    .from('purchase')
-    .select('id')
-    .eq('supplierid', supplierId)
-    .eq('status', 'posted')
-    .gt('remainingamount', 0)
-    .is('deleted_at', null)
+    if (!data) {
+      console.log(`[${functionName}] بيانات المورد فارغة`)
+      return null
+    }
 
-  if (purchaseError) throw purchaseError
+    // Count active purchases with remaining amount
+    const { data: purchases, error: purchaseError, count } = await supabase
+      .from('purchase')
+      .select('id', { count: 'exact', head: true })
+      .eq('supplierid', supplierId)
+      .eq('status', 'posted')
+      .gt('remainingamount', 0)
+      .is('deleted_at', null)
 
-  return {
-    ...supplier,
-    active_purchase_count: purchases?.length || 0,
-    can_delete: (purchases?.length || 0) === 0
+    if (purchaseError) {
+      logError(`${functionName}::countPurchases`, purchaseError, { supplierId })
+      throw purchaseError
+    }
+
+    const result = {
+      ...data,
+      active_purchase_count: count || 0,
+      can_delete: (count || 0) === 0
+    }
+
+    console.log(`[${functionName}] تم بنجاح: ${result.active_purchase_count} فاتورة نشطة`)
+    return result
+  } catch (error: any) {
+    logError(functionName, error, { supplierId })
+    throw new Error(`فشل في جلب المورد: ${error?.message || 'خطأ غير معروف'}`)
   }
 }
 
 /**
  * Get all suppliers with their purchase summary (analytics)
  */
-export async function getAllSuppliersWithAnalytics(storeid: string): Promise<(TopSupplier & { total_debt?: number })[]> {
-  const supabase = await createClientServer()
+export async function getAllSuppliersWithAnalytics(storeid: string) {
+  const functionName = 'getAllSuppliersWithAnalytics'
   
-  // Get top suppliers
-  const { data: topSuppliers, error: error1 } = await supabase
-    .from('v_top_suppliers')
-    .select('*')
-    //.eq('storeid', storeid)
+  try {
+    if (!storeid) throw new Error('storeid مطلوب')
 
-  if (error1) throw error1
+    console.log(`[${functionName}] البدء: جلب تحليلات الموردين الكاملة`)
+    
+    const supabase = await createClientServer()
+    
+    // Get top suppliers
+    const { data: topSuppliers, error: error1 } = await supabase
+      .from('v_top_suppliers')
+      .select('*')
+      .eq('storeid', storeid)
 
-  // Get debts
-  const { data: debts, error: error2 } = await supabase
-    .from('v_supplier_debts')
-    .select('*')
-    //.eq('storeid', storeid)
+    if (error1) {
+      logError(`${functionName}::getTopSuppliers`, error1, { storeid })
+      throw error1
+    }
 
-  if (error2) throw error2
+    // Get debts
+    const { data: debts, error: error2 } = await supabase
+      .from('v_supplier_debts')
+      .select('*')
+      .eq('storeid', storeid)
 
-  // Merge data: combine top suppliers with their debt info
-  const debtMap = new Map(debts?.map((d: any) => [d.id, d.total_debt]) || [])
-  
-  return (topSuppliers || []).map((supplier: any) => ({
-    ...supplier,
-    total_debt: debtMap.get(supplier.id) || 0
-  }))
+    if (error2) {
+      logError(`${functionName}::getDebts`, error2, { storeid })
+      throw error2
+    }
+
+    // Merge data
+    const debtMap = new Map((debts || []).map((d: any) => [d.id, d.total_debt]))
+    
+    const result = (topSuppliers || []).map((supplier: any) => ({
+      ...supplier,
+      total_debt: debtMap.get(supplier.id) || 0
+    }))
+
+    console.log(`[${functionName}] تم بنجاح: ${result.length} مورد مع التحليلات`)
+    return result
+  } catch (error: any) {
+    logError(functionName, error, { storeid })
+    throw new Error(`فشل في جلب التحليلات: ${error?.message || 'خطأ غير معروف'}`)
+  }
 }

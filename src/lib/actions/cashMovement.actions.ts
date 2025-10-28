@@ -9,7 +9,7 @@ import {
   linkCashMovementToPayment,
   getCashMovementsForPayment,
 } from '@/lib/supabase/db/payments';
-import { CashMovement, InsertCashMovement } from '@/lib/types/types';
+import { CashMovement, InsertCashMovement } from '@/lib/types/index';
 
 // ==================== RESPONSE TYPES ====================
 export interface ActionResponse<T> {

@@ -14,7 +14,7 @@ import {
   getSettlementRecords,
   updateSettlementReconciliation,
 } from '@/lib/supabase/db/cashRegister';
-import { CashRegister, CashRegisterSnapshot, SettlementRecord }  from '../types/types';
+import { CashRegister, CashRegisterSnapshot, SettlementRecord }  from '../types/enums';
 
 // ==================== RESPONSE TYPES ====================
 export interface ActionResponse<T> {

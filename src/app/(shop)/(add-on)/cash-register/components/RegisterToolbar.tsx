@@ -5,7 +5,7 @@
 
 import { useState } from 'react'
 import { Unlock, Lock, Download } from 'lucide-react'
-import { CashRegister } from '@/lib/types/types'
+import { CashRegister } from '@/lib/types/index'
 import { OpenRegisterModal } from './modals/OpenRegisterModal'
 import { CloseRegisterModal } from './modals/CloseRegisterModal'
 

@@ -5,7 +5,7 @@
 
 import { useState } from 'react'
 import { Lock, AlertCircle, X } from 'lucide-react'
-import { CashRegister } from '@/lib/types/types'
+import { CashRegister } from '@/lib/types/index'
 import { closeCashRegisterAction } from '@/lib/actions/cashRegister.actions'
 
 interface Props {

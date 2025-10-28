@@ -551,100 +551,6 @@ export default function SaleDetailClient({ sale, items, phones, accessories, use
               </div>
             )}
 
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              setLoading(true)
-              setError(null)
-
-              const formData = new FormData(e.currentTarget)
-              const { recordSalePaymentAction } = await import('@/lib/actions/payments')
-
-              const result = await recordSalePaymentAction(sale.id, formData)
-
-              if (result.success) {
-                setIsPaymentModalOpen(false)
-                router.refresh()
-              } else {
-                setError(result.error)
-              }
-              
-              setLoading(false)
-            }} className="space-y-4">
-              {/* Amount */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  المبلغ المدفوع *
-                </label>
-                <input
-                  type="number"
-                  name="amount"
-                  max={sale.remainingamount}
-                  min={0}
-                  step="0.01"
-                  required
-                  defaultValue={sale.remainingamount}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                  disabled={loading}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  المتبقي: {sale.remainingamount.toLocaleString()} دج
-                </p>
-              </div>
-
-              {/* Payment Method */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  طريقة الدفع *
-                </label>
-                <select
-                  name="method"
-                  required
-                  defaultValue="cash"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                  disabled={loading}
-                >
-                  <option value="cash">💵 نقدي</option>
-                  <option value="card">💳 بطاقة</option>
-                  <option value="bank_transfer">🏦 تحويل بنكي</option>
-                  <option value="cheque">📝 شيك</option>
-                </select>
-              </div>
-
-              {/* Reference */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  المرجع / رقم العملية
-                </label>
-                <input
-                  type="text"
-                  name="reference"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                  placeholder="اختياري"
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsPaymentModalOpen(false)
-                    setError(null)
-                  }}
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
-                >
-                  {loading ? 'جاري التسجيل...' : 'تسجيل الدفعة'}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

@@ -10,7 +10,7 @@ import {
   recordPaymentWithRegister,
   getStorePaymentsByDateRange,
 } from '@/lib/supabase/db/payments';
-import { InsertPayment, Payment } from '../types/types';
+import { InsertPayment, Payment } from '../types/enums';
 
 // ==================== RESPONSE TYPES ====================
 export interface ActionResponse<T> {

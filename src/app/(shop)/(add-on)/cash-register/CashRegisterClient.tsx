@@ -4,7 +4,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CashRegister } from '@/lib/types/types'
+import { CashRegister } from '@/lib/types/index'
 import DashboardLayout from '@/components/DashboardLayout'
 import { RegisterStats } from './components/RegisterStats'
 import { RegisterToolbar } from './components/RegisterToolbar'
