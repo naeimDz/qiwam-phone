@@ -121,12 +121,15 @@ export async function createPurchaseAction(formData: FormData): Promise<ActionRe
     const purchase = await purchaseDb.insertPurchase({
       storeid: user.storeid,
       supplierid: supplierid || null,
-     // docnumber,
+      // docnumber,
       docdate: new Date(),
       notes: notes?.trim() || null,
       status: 'draft',
       createdbyid: user.id,
-      modifiedbyid: null
+      modifiedbyid: null,
+      doc_sequence: null,
+      fiscal_year: 0,
+      payment_method: null
     })
 
     console.log(`[${actionName}] تم بنجاح: فاتورة ${purchase.id}`)

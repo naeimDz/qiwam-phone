@@ -230,6 +230,24 @@ export type StockMovementStats = {
   days_with_activity?: number
 }
 
+export type InsertStockMovement = Omit<
+  StockMovement,
+  'id' | 'createdat'
+>
+
+export type UpdateStockMovement = Partial<
+  Omit<
+    StockMovement,
+    'id' | 'storeid' | 'createdat' | 'item_type' | 'phone_id' | 'accessory_id' | 'movement_type'
+  >
+>
+
+export type UpdateStockMovementPartial = {
+  notes?: string
+  reference_number?: string
+  source_reference_id?: string
+  batch_id?: string
+}
 // ==================== Transaction Types ====================
 export type TransactionStatus = 'draft' | 'posted' | 'cancelled'
 export type SaleType = 'cash' | 'credit'
@@ -380,8 +398,6 @@ export type PaymentWithDetails = Payment & {
   purchase_docnumber: string | null
   reconciled_by_name: string | null
 }
-
-export type PaymentInsert = Omit<Payment, 'id' | 'captured_at' | 'createdat'>
 
 // ==================== Expense (المصروفات) ====================
 export type ExpenseStatus = 'pending' | 'paid' | 'cancelled'
@@ -693,12 +709,23 @@ export type InsertSale = Omit<Sale, 'id' | 'createdat' | 'updatedat' | 'deleted_
 export type InsertSaleItem = Omit<SaleItem, 'id' | 'createdat'>;
 export type InsertPurchase = Omit<Purchase, 'id' | 'createdat' | 'updatedat' | 'deleted_at'>;
 export type InsertPurchaseItem = Omit<PurchaseItem, 'id' | 'createdat'>;
-export type InsertPayment = Omit<Payment, 'id' | 'createdat'>;
+export type InsertPayment = Omit<
+  Payment,
+  | 'id'                      // UUID في الـ DB
+  | 'createdat'               // DB default: now()
+  | 'cancelled_at'            // عند cancelPayment()
+  | 'cancellation_reason'     // عند cancelPayment()
+  | 'reconciled_at'           // عند reconcilePayment()
+  | 'reconciled_by'           // عند reconcilePayment()
+  | 'doc_sequence'            // من Trigger
+  | 'captured_at'            // عند إنشاء دفعة captured
+  | 'is_reconciled'           // عند reconcilePayment()
+  | 'status'                  // عند إنشاء دفعة جديدة تكون 'captured' افتراضياً
+>
 export type InsertReturnTransaction = Omit<ReturnTransaction, 'id' | 'createdat'>;
 export type InsertTradeTransaction = Omit<TradeTransaction, 'id' | 'createdat'>;
 export type InsertCashRegister = Omit<CashRegister, 'id' | 'createdat'>;
 export type InsertCashMovement = Omit<CashMovement, 'id' | 'createdat'>;
-export type InsertStockMovement = Omit<StockMovement, 'id' | 'createdat'>;
 export type InsertDocumentSequence = Omit<DocumentSequence, 'id' | 'createdat' | 'updated_at'>;
 
 // ==================== UPDATE TYPES ====================
@@ -718,5 +745,4 @@ export type UpdatePayment = Partial<Omit<Payment, 'id' | 'storeid' | 'createdat'
 export type UpdateReturnTransaction = Partial<Omit<ReturnTransaction, 'id' | 'storeid' | 'createdat'>>;
 export type UpdateTradeTransaction = Partial<Omit<TradeTransaction, 'id' | 'storeid' | 'createdat'>>;
 export type UpdateCashRegister = Partial<Omit<CashRegister, 'id' | 'storeid' | 'createdat'>>;
-export type UpdateStockMovement = Partial<Omit<StockMovement, 'id' | 'storeid' | 'createdat'>>;
 export type UpdateDocumentSequence = Partial<Omit<DocumentSequence, 'id' | 'storeid' | 'createdat'>>;

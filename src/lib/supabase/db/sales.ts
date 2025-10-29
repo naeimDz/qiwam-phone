@@ -1,12 +1,12 @@
 // lib/supabase/db/sales.ts
-// DB Layer - Sales transactions with detailed error handling
+// DB Layer - Sales transactions
+// Queries only - NO validation, NO business logic
 
 import { createClientServer } from '@/lib/supabase'
 import { Sale, SaleWithDetails } from '@/lib/types'
 
 type SaleInsert = Omit<Sale, 'id' | 'total' | 'paidamount' | 'remainingamount' | 'createdat' | 'updatedat' | 'deleted_at'>
 
-// Error logging utility
 interface ErrorLog {
   timestamp: string
   function: string
@@ -31,6 +31,8 @@ const logError = (functionName: string, error: any, context?: Record<string, any
   return errorLog
 }
 
+// ==================== READ OPERATIONS ====================
+
 /**
  * Get all sales for a store
  */
@@ -40,16 +42,12 @@ export async function getSalesByStore(
   offset: number = 0
 ): Promise<SaleWithDetails[]> {
   const functionName = 'getSalesByStore'
-  
-  try {
-    if (!storeid) {
-      throw new Error('storeid مطلوب')
-    }
 
-    console.log(`[${functionName}] البدء: storeid=${storeid}, limit=${limit}, offset=${offset}`)
-    
+  try {
+    if (!storeid) throw new Error('storeid مطلوب')
+
     const supabase = await createClientServer()
-    
+
     const { data, error } = await supabase
       .from('sale')
       .select(`
@@ -64,27 +62,20 @@ export async function getSalesByStore(
       .range(offset, offset + limit - 1)
 
     if (error) {
-      logError(functionName, error, { storeid, limit, offset })
+      logError(functionName, error, { storeid })
       throw error
     }
 
-    if (!data || data.length === 0) {
-      console.log(`[${functionName}] لا توجد مبيعات للمتجر: ${storeid}`)
-    }
-    
-    // Get items count for each sale
+    if (!data) return []
+
+    // Get items count
     const salesWithCounts = await Promise.all(
       data.map(async (sale) => {
         try {
-          const { count, error: countError } = await supabase
+          const { count } = await supabase
             .from('sale_item')
             .select('*', { count: 'exact', head: true })
             .eq('saleid', sale.id)
-          
-          if (countError) {
-            logError(`${functionName}::getItemsCount`, countError, { saleid: sale.id })
-            console.warn(`تحذير: فشل في الحصول على عدد العناصر للفاتورة ${sale.id}`)
-          }
 
           return {
             ...sale,
@@ -94,7 +85,6 @@ export async function getSalesByStore(
             items_count: count || 0
           }
         } catch (err) {
-          logError(`${functionName}::processItem`, err, { saleid: sale.id })
           return {
             ...sale,
             customer_name: sale.customer?.fullname || null,
@@ -105,30 +95,25 @@ export async function getSalesByStore(
         }
       })
     )
-    
-    console.log(`[${functionName}] تم بنجاح: ${salesWithCounts.length} فاتورة`)
+
     return salesWithCounts
   } catch (error: any) {
-    logError(functionName, error, { storeid, limit, offset })
-    throw new Error(`فشل في جلب المبيعات: ${error?.message || 'خطأ غير معروف'}`)
+    logError(functionName, error, { storeid })
+    throw new Error(`فشل في جلب المبيعات: ${error?.message}`)
   }
 }
 
 /**
- * Get sale by ID with full details
+ * Get sale by ID
  */
 export async function getSaleById(saleId: string): Promise<SaleWithDetails | null> {
   const functionName = 'getSaleById'
-  
-  try {
-    if (!saleId) {
-      throw new Error('saleId مطلوب')
-    }
 
-    console.log(`[${functionName}] البدء: saleId=${saleId}`)
-    
+  try {
+    if (!saleId) throw new Error('saleId مطلوب')
+
     const supabase = await createClientServer()
-    
+
     const { data, error } = await supabase
       .from('sale')
       .select(`
@@ -141,43 +126,29 @@ export async function getSaleById(saleId: string): Promise<SaleWithDetails | nul
       .single()
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        console.log(`[${functionName}] الفاتورة غير موجودة: ${saleId}`)
-        return null
-      }
+      if (error.code === 'PGRST116') return null
       logError(functionName, error, { saleId })
       throw error
     }
 
-    if (!data) {
-      console.log(`[${functionName}] لا توجد بيانات للفاتورة: ${saleId}`)
-      return null
-    }
-    
+    if (!data) return null
+
     // Get items count
-    const { count, error: countError } = await supabase
+    const { count } = await supabase
       .from('sale_item')
       .select('*', { count: 'exact', head: true })
       .eq('saleid', saleId)
-    
-    if (countError) {
-      logError(`${functionName}::getItemsCount`, countError, { saleId })
-      console.warn(`تحذير: فشل في الحصول على عدد العناصر`)
-    }
-    
-    const result = {
+
+    return {
       ...data,
       customer_name: data.customer?.fullname || null,
       customer_phone: data.customer?.phone || null,
       created_by_name: data.created_by?.fullname || null,
       items_count: count || 0
     }
-
-    console.log(`[${functionName}] تم بنجاح`)
-    return result
   } catch (error: any) {
     logError(functionName, error, { saleId })
-    throw new Error(`فشل في جلب الفاتورة: ${error?.message || 'خطأ غير معروف'}`)
+    throw new Error(`فشل في جلب الفاتورة: ${error?.message}`)
   }
 }
 
@@ -187,19 +158,18 @@ export async function getSaleById(saleId: string): Promise<SaleWithDetails | nul
 export async function getSalesByDateRange(
   storeid: string,
   startDate: Date,
-  endDate: Date
+  endDate: Date,
+  limit: number = 50,
+  offset: number = 0
 ): Promise<SaleWithDetails[]> {
   const functionName = 'getSalesByDateRange'
-  
+
   try {
     if (!storeid) throw new Error('storeid مطلوب')
     if (!startDate || !endDate) throw new Error('التواريخ مطلوبة')
-    if (startDate > endDate) throw new Error('تاريخ البداية أكبر من تاريخ النهاية')
 
-    console.log(`[${functionName}] البدء: storeid=${storeid}, من ${startDate.toISOString()} إلى ${endDate.toISOString()}`)
-    
     const supabase = await createClientServer()
-    
+
     const { data, error } = await supabase
       .from('sale')
       .select(`
@@ -212,27 +182,22 @@ export async function getSalesByDateRange(
       .lte('docdate', endDate.toISOString())
       .is('deleted_at', null)
       .order('docdate', { ascending: false })
+      .range(offset, offset + limit - 1)
 
     if (error) {
       logError(functionName, error, { storeid, startDate, endDate })
       throw error
     }
 
-    if (!data || data.length === 0) {
-      console.log(`[${functionName}] لا توجد مبيعات في النطاق المحدد`)
-    }
-    
+    if (!data) return []
+
     const salesWithCounts = await Promise.all(
       data.map(async (sale) => {
         try {
-          const { count, error: countError } = await supabase
+          const { count } = await supabase
             .from('sale_item')
             .select('*', { count: 'exact', head: true })
             .eq('saleid', sale.id)
-          
-          if (countError) {
-            logError(`${functionName}::getItemsCount`, countError, { saleid: sale.id })
-          }
 
           return {
             ...sale,
@@ -242,7 +207,6 @@ export async function getSalesByDateRange(
             items_count: count || 0
           }
         } catch (err) {
-          logError(`${functionName}::processItem`, err, { saleid: sale.id })
           return {
             ...sale,
             customer_name: sale.customer?.fullname || null,
@@ -253,12 +217,11 @@ export async function getSalesByDateRange(
         }
       })
     )
-    
-    console.log(`[${functionName}] تم بنجاح: ${salesWithCounts.length} فاتورة`)
+
     return salesWithCounts
   } catch (error: any) {
     logError(functionName, error, { storeid, startDate, endDate })
-    throw new Error(`فشل في جلب المبيعات: ${error?.message || 'خطأ غير معروف'}`)
+    throw new Error(`فشل في جلب المبيعات: ${error?.message}`)
   }
 }
 
@@ -266,19 +229,17 @@ export async function getSalesByDateRange(
  * Get sale by document number
  */
 export async function getSaleByDocNumber(
-  storeid: string, 
+  storeid: string,
   docnumber: string
 ): Promise<SaleWithDetails | null> {
   const functionName = 'getSaleByDocNumber'
-  
+
   try {
     if (!storeid) throw new Error('storeid مطلوب')
     if (!docnumber) throw new Error('docnumber مطلوب')
 
-    console.log(`[${functionName}] البدء: storeid=${storeid}, docnumber=${docnumber}`)
-    
     const supabase = await createClientServer()
-    
+
     const { data, error } = await supabase
       .from('sale')
       .select(`
@@ -292,88 +253,79 @@ export async function getSaleByDocNumber(
       .single()
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        console.log(`[${functionName}] الفاتورة غير موجودة: ${docnumber}`)
-        return null
-      }
+      if (error.code === 'PGRST116') return null
       logError(functionName, error, { storeid, docnumber })
       throw error
     }
 
-    if (!data) {
-      console.log(`[${functionName}] لا توجد بيانات للفاتورة: ${docnumber}`)
-      return null
-    }
-    
-    const { count, error: countError } = await supabase
+    if (!data) return null
+
+    const { count } = await supabase
       .from('sale_item')
       .select('*', { count: 'exact', head: true })
       .eq('saleid', data.id)
-    
-    if (countError) {
-      logError(`${functionName}::getItemsCount`, countError, { saleid: data.id })
-    }
-    
-    const result = {
+
+    return {
       ...data,
       customer_name: data.customer?.fullname || null,
       customer_phone: data.customer?.phone || null,
       created_by_name: data.created_by?.fullname || null,
       items_count: count || 0
     }
-
-    console.log(`[${functionName}] تم بنجاح`)
-    return result
   } catch (error: any) {
     logError(functionName, error, { storeid, docnumber })
-    throw new Error(`فشل في جلب الفاتورة: ${error?.message || 'خطأ غير معروف'}`)
+    throw new Error(`فشل في جلب الفاتورة: ${error?.message}`)
   }
 }
 
+// ==================== WRITE OPERATIONS ====================
+
 /**
- * Insert new sale (invoice header)
+ * Insert new sale
+ * Triggers automatically:
+ *    - tr_auto_assign_doc_sequence
+ *    - tr_audit_sale_changes
  */
 export async function insertSale(data: SaleInsert): Promise<Sale> {
   const functionName = 'insertSale'
-  
+
   try {
     if (!data.storeid) throw new Error('storeid مطلوب')
     if (!data.docnumber) throw new Error('docnumber مطلوب')
 
-    console.log(`[${functionName}] البدء: إنشاء فاتورة جديدة للمتجر ${data.storeid}`)
-    
     const supabase = await createClientServer()
-    
+
     const { data: sale, error } = await supabase
       .from('sale')
       .insert([{
         ...data,
         total: 0,
         paidamount: 0,
+        remainingamount: 0
       }])
       .select('*')
       .single()
 
     if (error) {
-      logError(functionName, error, { storeid: data.storeid, docnumber: data.docnumber })
+      logError(functionName, error, { storeid: data.storeid })
       throw error
     }
 
     if (!sale) {
-      throw new Error('فشل في إرجاع الفاتورة المُنشأة')
+      throw new Error('فشل في إرجاع الفاتورة المنشأة')
     }
 
-    console.log(`[${functionName}] تم بنجاح: الفاتورة ${sale.id}`)
     return sale
   } catch (error: any) {
     logError(functionName, error, { data })
-    throw new Error(`فشل في إنشاء الفاتورة: ${error?.message || 'خطأ غير معروف'}`)
+    throw new Error(`فشل في إنشاء الفاتورة: ${error?.message}`)
   }
 }
 
 /**
- * Update sale basic info (customer, notes only)
- * DO NOT update total/paidamount - triggers handle it
+ * Update sale basic info
+ * Triggers automatically:
+ *    - tr_audit_sale_changes
  */
 export async function updateSaleBasic(
   saleId: string,
@@ -381,14 +333,12 @@ export async function updateSaleBasic(
   notes: string | null
 ): Promise<Sale> {
   const functionName = 'updateSaleBasic'
-  
+
   try {
     if (!saleId) throw new Error('saleId مطلوب')
 
-    console.log(`[${functionName}] البدء: تحديث الفاتورة ${saleId}`)
-    
     const supabase = await createClientServer()
-    
+
     const { data, error } = await supabase
       .from('sale')
       .update({
@@ -405,70 +355,80 @@ export async function updateSaleBasic(
       if (error.code === 'PGRST116') {
         throw new Error('الفاتورة غير موجودة أو محذوفة')
       }
-      logError(functionName, error, { saleId, customerid })
-      throw error
-    }
-
-    if (!data) {
-      throw new Error('فشل في إرجاع الفاتورة المُحدثة')
-    }
-
-    console.log(`[${functionName}] تم بنجاح`)
-    return data
-  } catch (error: any) {
-    logError(functionName, error, { saleId, customerid, notes })
-    throw new Error(`فشل في تحديث الفاتورة: ${error?.message || 'خطأ غير معروف'}`)
-  }
-}
-
-/**
- * Cancel sale (soft delete items, revert stock)
- */
-export async function cancelSale(saleId: string): Promise<void> {
-  const functionName = 'cancelSale'
-  
-  try {
-    if (!saleId) throw new Error('saleId مطلوب')
-
-    console.log(`[${functionName}] البدء: إلغاء الفاتورة ${saleId}`)
-    
-    const supabase = await createClientServer()
-    
-    const { error } = await supabase
-      .from('sale')
-      .update({ 
-        status: 'cancelled',
-        updatedat: new Date().toISOString()
-      })
-      .eq('id', saleId)
-
-    if (error) {
       logError(functionName, error, { saleId })
       throw error
     }
 
-    console.log(`[${functionName}] تم بنجاح: الفاتورة ${saleId} ملغاة`)
+    if (!data) {
+      throw new Error('فشل في إرجاع الفاتورة المحدثة')
+    }
+
+    return data
   } catch (error: any) {
     logError(functionName, error, { saleId })
-    throw new Error(`فشل في إلغاء الفاتورة: ${error?.message || 'خطأ غير معروف'}`)
+    throw new Error(`فشل في تحديث الفاتورة: ${error?.message}`)
   }
 }
 
 /**
- * Generate next document number
+ * Update sale status (draft → posted → cancelled)
+ * Triggers automatically:
+ *    - tr_audit_sale_changes
  */
-export async function generateSaleDocNumber(storeid: string): Promise<string> {
-  const functionName = 'generateSaleDocNumber'
-  
+export async function updateSaleStatus(
+  saleId: string,
+  status: 'draft' | 'posted' | 'cancelled'
+): Promise<Sale> {
+  const functionName = 'updateSaleStatus'
+
+  try {
+    if (!saleId) throw new Error('saleId مطلوب')
+    if (!['draft', 'posted', 'cancelled'].includes(status)) throw new Error('status غير صحيح')
+
+    const supabase = await createClientServer()
+
+    const { data, error } = await supabase
+      .from('sale')
+      .update({
+        status,
+        updatedat: new Date().toISOString()
+      })
+      .eq('id', saleId)
+      .select('*')
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new Error('الفاتورة غير موجودة')
+      }
+      logError(functionName, error, { saleId, status })
+      throw error
+    }
+
+    if (!data) {
+      throw new Error('فشل في إرجاع الفاتورة المحدثة')
+    }
+
+    return data
+  } catch (error: any) {
+    logError(functionName, error, { saleId, status })
+    throw new Error(`فشل في تحديث حالة الفاتورة: ${error?.message}`)
+  }
+}
+
+/**
+ * Generate next document number for today
+ */
+export async function generateNextDocNumber(storeid: string): Promise<string> {
+  const functionName = 'generateNextDocNumber'
+
   try {
     if (!storeid) throw new Error('storeid مطلوب')
 
-    console.log(`[${functionName}] البدء: توليد رقم فاتورة جديد`)
-    
     const supabase = await createClientServer()
-    
+
     const today = new Date().toISOString().split('T')[0]
-    
+
     const { data, error } = await supabase
       .from('sale')
       .select('docnumber')
@@ -478,7 +438,7 @@ export async function generateSaleDocNumber(storeid: string): Promise<string> {
       .limit(1)
 
     if (error) {
-      logError(functionName, error, { storeid, today })
+      logError(functionName, error, { storeid })
       throw error
     }
 
@@ -490,18 +450,15 @@ export async function generateSaleDocNumber(storeid: string): Promise<string> {
           nextNumber = lastNumber + 1
         }
       } catch (parseErr) {
-        console.warn(`[${functionName}] تحذير: فشل في تحليل رقم الفاتورة الأخيرة`)
+        // Use default next number
       }
     }
-    
-    const dateStr = today.replace(/-/g, '')
-    const docNumber = `INV-${dateStr}-${nextNumber.toString().padStart(4, '0')}`
 
-    console.log(`[${functionName}] تم بنجاح: ${docNumber}`)
-    return docNumber
+    const dateStr = today.replace(/-/g, '')
+    return `INV-${dateStr}-${nextNumber.toString().padStart(4, '0')}`
   } catch (error: any) {
     logError(functionName, error, { storeid })
-    throw new Error(`فشل في توليد رقم الفاتورة: ${error?.message || 'خطأ غير معروف'}`)
+    throw new Error(`فشل في توليد رقم الفاتورة: ${error?.message}`)
   }
 }
 
@@ -510,18 +467,16 @@ export async function generateSaleDocNumber(storeid: string): Promise<string> {
  */
 export async function getSalesSummary(storeid: string, days: number = 30) {
   const functionName = 'getSalesSummary'
-  
+
   try {
     if (!storeid) throw new Error('storeid مطلوب')
     if (days < 1) throw new Error('عدد الأيام يجب أن يكون أكبر من 0')
 
-    console.log(`[${functionName}] البدء: حساب إحصائيات آخر ${days} يوم`)
-    
     const supabase = await createClientServer()
-    
+
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
-    
+
     const { data, error } = await supabase
       .from('sale')
       .select('total, paidamount, status, saletype')
@@ -534,11 +489,10 @@ export async function getSalesSummary(storeid: string, days: number = 30) {
       throw error
     }
 
-    if (!data) {
-      console.log(`[${functionName}] لا توجد بيانات للفترة المحددة`)
-      return getEmptyStats()
+    if (!data || data.length === 0) {
+      return getEmptySalesSummary()
     }
-    
+
     const stats = {
       total_sales: 0,
       total_amount: 0,
@@ -548,39 +502,32 @@ export async function getSalesSummary(storeid: string, days: number = 30) {
       credit_sales: 0,
       cancelled_sales: 0
     }
-    
-    try {
-      data.forEach(sale => {
-        stats.total_sales++
-        stats.total_amount += Number(sale.total) || 0
-        stats.total_paid += Number(sale.paidamount) || 0
-        
-        if (sale.status === 'cancelled') {
-          stats.cancelled_sales++
-        } else {
-          if (sale.saletype === 'cash') stats.cash_sales++
-          if (sale.saletype === 'credit') stats.credit_sales++
-        }
-      })
-      
-      stats.total_remaining = stats.total_amount - stats.total_paid
-    } catch (calcErr) {
-      logError(`${functionName}::calculateStats`, calcErr, { totalRecords: data.length })
-      console.error('خطأ في حساب الإحصائيات')
-    }
 
-    console.log(`[${functionName}] تم بنجاح: ${stats.total_sales} فاتورة، إجمالي ${stats.total_amount}`)
+    data.forEach(sale => {
+      stats.total_sales++
+      stats.total_amount += Number(sale.total) || 0
+      stats.total_paid += Number(sale.paidamount) || 0
+
+      if (sale.status === 'cancelled') {
+        stats.cancelled_sales++
+      } else {
+        if (sale.saletype === 'cash') stats.cash_sales++
+        if (sale.saletype === 'credit') stats.credit_sales++
+      }
+    })
+
+    stats.total_remaining = stats.total_amount - stats.total_paid
+
     return stats
   } catch (error: any) {
     logError(functionName, error, { storeid, days })
-    throw new Error(`فشل في حساب الإحصائيات: ${error?.message || 'خطأ غير معروف'}`)
+    throw new Error(`فشل في حساب الإحصائيات: ${error?.message}`)
   }
 }
 
-/**
- * Helper function to return empty stats
- */
-function getEmptyStats() {
+// ==================== HELPERS ====================
+
+function getEmptySalesSummary() {
   return {
     total_sales: 0,
     total_amount: 0,

@@ -1,318 +1,326 @@
-// app/actions/cashRegister.actions.ts
-'use server';
+// lib/actions/cashRegister.actions.ts
+// Actions Layer - Cash register business logic + authorization
+// Orchestrates DB calls and user-facing workflow
 
-import {
-  createCashRegister,
-  closeCashRegister,
-  getCashRegisterById,
-  getOpenCashRegister,
-  getStoreCashRegisters,
-  reconcileCashRegister,
-  createCashSnapshot,
-  getCashSnapshots,
-  createSettlementRecord,
-  getSettlementRecords,
-  updateSettlementReconciliation,
-} from '@/lib/supabase/db/cashRegister';
-import { CashRegister, CashRegisterSnapshot, SettlementRecord }  from '../types/enums';
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import * as cashRegisterDb from '@/lib/supabase/db/cashRegister'
+import * as authDb from '@/lib/supabase/db/auth'
+import { CashRegister, CashRegisterSnapshot, SettlementRecord } from '@/lib/types'
 
 // ==================== RESPONSE TYPES ====================
-export interface ActionResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+type ActionResult<T = void> = 
+  | { success: true; data: T }
+  | { success: false; error: string }
 
 // ==================== CASH REGISTER ACTIONS ====================
 
 /**
- * فتح خزينة نقدية جديدة
+ * Open new cash register
+ * 
+ * Flow:
+ * 1. Authorization - any user
+ * 2. Validate no other register is open
+ * 3. Call DB insertCashRegister
+ * 4. Trigger automatically inserts audit_log
+ * 5. Revalidate cache
  */
 export async function openCashRegisterAction(
-  storeId: string,
-  openedByUserId: string,
-  openingBalance: number
-): Promise<ActionResponse<CashRegister>> {
+  openingBalance: number,
+  notes?: string
+): Promise<ActionResult<CashRegister>> {
   try {
-    if (!storeId || !openedByUserId) {
-      return { success: false, error: 'Store ID and User ID are required' };
+    const user = await authDb.getCurrentUser()
+    if (!user?.storeid) {
+      return { success: false, error: 'لا يوجد متجر مرتبط بحسابك' }
     }
+
+    // Validate opening balance
     if (openingBalance < 0) {
-      return { success: false, error: 'Opening balance cannot be negative' };
+      return { success: false, error: 'الرصيد الافتتاحي لا يمكن أن يكون سالب' }
     }
 
-    // التحقق من عدم وجود خزينة مفتوحة
-    const openRegister = await getOpenCashRegister(storeId);
+    // Check if register already open
+    const openRegister = await cashRegisterDb.getOpenCashRegister(user.storeid)
     if (openRegister) {
-      return {
-        success: false,
-        error: 'There is already an open cash register for this store',
-      };
+      return { success: false, error: 'توجد خزينة مفتوحة بالفعل' }
     }
 
-    const register = await createCashRegister(
-      storeId,
-      openedByUserId,
-      openingBalance
-    );
+    // Call DB
+    const register = await cashRegisterDb.insertCashRegister(
+      user.storeid,
+      user.id,
+      openingBalance,
+      notes
+    )
 
-    return { success: true, data: register };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    revalidatePath('/cash-register')
+    return { success: true, data: register }
+  } catch (error: any) {
+    console.error('openCashRegisterAction error:', error)
+    return { success: false, error: 'فشل في فتح الخزينة' }
   }
 }
 
 /**
- * إغلاق خزينة نقدية
+ * Get currently open cash register
+ */
+export async function getOpenCashRegisterAction(): Promise<ActionResult<CashRegister | null>> {
+  try {
+    const user = await authDb.getCurrentUser()
+    if (!user?.storeid) {
+      return { success: false, error: 'لا يوجد متجر مرتبط بحسابك' }
+    }
+
+    const register = await cashRegisterDb.getOpenCashRegister(user.storeid)
+    return { success: true, data: register || null }
+  } catch (error: any) {
+    console.error('getOpenCashRegisterAction error:', error)
+    return { success: false, error: 'فشل في جلب الخزينة المفتوحة' }
+  }
+}
+
+/**
+ * Get all cash registers for store
+ */
+export async function getCashRegistersAction(
+  status?: 'open' | 'closed'
+): Promise<ActionResult<CashRegister[]>> {
+  try {
+    const user = await authDb.getCurrentUser()
+    if (!user?.storeid) {
+      return { success: false, error: 'لا يوجد متجر مرتبط بحسابك' }
+    }
+
+    const registers = await cashRegisterDb.getCashRegistersByStore(user.storeid, status)
+    return { success: true, data: registers }
+  } catch (error: any) {
+    console.error('getCashRegistersAction error:', error)
+    return { success: false, error: 'فشل في جلب الخزائن' }
+  }
+}
+
+/**
+ * Close cash register with reconciliation
+ * 
+ * Flow:
+ * 1. Authorization - any user
+ * 2. Validate register is open
+ * 3. Call DB updateCashRegisterClose
+ * 4. Triggers automatically:
+ *    - create settlement_record
+ *    - calculate difference
+ *    - detect variance if needed
+ *    - insert audit_log
+ * 5. Revalidate cache
+ * 6. Return settlement info
  */
 export async function closeCashRegisterAction(
   registerId: string,
-  closedByUserId: string,
   closingBalance: number,
   notes?: string
-): Promise<ActionResponse<CashRegister>> {
+): Promise<ActionResult<CashRegister>> {
   try {
-    if (!registerId || !closedByUserId) {
-      return { success: false, error: 'Register ID and User ID are required' };
+    const user = await authDb.getCurrentUser()
+    if (!user?.storeid) {
+      return { success: false, error: 'لا يوجد متجر مرتبط بحسابك' }
     }
 
-    const register = await getCashRegisterById(registerId);
+    // Validation
+    if (!registerId) {
+      return { success: false, error: 'معرف الخزينة مطلوب' }
+    }
+
+    if (closingBalance < 0) {
+      return { success: false, error: 'الرصيد الختامي لا يمكن أن يكون سالب' }
+    }
+
+    // Verify register exists and is open
+    const register = await cashRegisterDb.getCashRegisterById(registerId)
+    if (!register) {
+      return { success: false, error: 'الخزينة غير موجودة' }
+    }
 
     if (register.status === 'closed') {
-      return { success: false, error: 'Cash register is already closed' };
+      return { success: false, error: 'الخزينة مغلقة بالفعل' }
     }
 
-    const updatedRegister = await closeCashRegister(
+    // Call DB
+    const closedRegister = await cashRegisterDb.updateCashRegisterClose(
       registerId,
-      closedByUserId,
+      user.id,
       closingBalance,
       notes
-    );
+    )
 
-    return { success: true, data: updatedRegister };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    revalidatePath('/cash-register')
+    return { success: true, data: closedRegister }
+  } catch (error: any) {
+    console.error('closeCashRegisterAction error:', error)
+    return { success: false, error: 'فشل في إغلاق الخزينة' }
   }
 }
 
 /**
- * جلب الخزينة المفتوحة
- */
-export async function getOpenCashRegisterAction(
-  storeId: string
-): Promise<ActionResponse<CashRegister | null>> {
-  try {
-    if (!storeId) {
-      return { success: false, error: 'Store ID is required' };
-    }
-
-    const register = await getOpenCashRegister(storeId);
-    return { success: true, data: register };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
-}
-
-/**
- * جلب جميع خزائن المتجر
- */
-export async function getStoreCashRegistersAction(
-  storeId: string,
-  status?: 'open' | 'closed'
-): Promise<ActionResponse<CashRegister[]>> {
-  try {
-    if (!storeId) {
-      return { success: false, error: 'Store ID is required' };
-    }
-
-    const registers = await getStoreCashRegisters(storeId, status);
-    return { success: true, data: registers };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
-}
-
-/**
- * توفيق خزينة
+ * Reconcile cash register (mark as reconciled)
  */
 export async function reconcileCashRegisterAction(
-  registerId: string,
-  reconciledByUserId: string
-): Promise<ActionResponse<CashRegister>> {
+  registerId: string
+): Promise<ActionResult<CashRegister>> {
   try {
-    if (!registerId || !reconciledByUserId) {
-      return {
-        success: false,
-        error: 'Register ID and User ID are required',
-      };
+    const user = await authDb.getCurrentUser()
+    if (!user?.storeid) {
+      return { success: false, error: 'لا يوجد متجر مرتبط بحسابك' }
     }
 
-    const register = await reconcileCashRegister(registerId, reconciledByUserId);
-    return { success: true, data: register };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
-}
-
-// ==================== CASH SNAPSHOT ACTIONS ====================
-
-/**
- * إنشاء لقطة للخزينة
- */
-export async function createCashSnapshotAction(
-  registerId: string,
-  balanceAtTime: number,
-  snapshotType: 'automatic' | 'manual' | 'reconciliation' | 'shift_close',
-  createdBy?: string,
-  notes?: string
-): Promise<ActionResponse<CashRegisterSnapshot>> {
-  try {
     if (!registerId) {
-      return { success: false, error: 'Register ID is required' };
+      return { success: false, error: 'معرف الخزينة مطلوب' }
     }
 
-    const snapshot = await createCashSnapshot(
-      registerId,
-      balanceAtTime,
-      snapshotType,
-      createdBy,
-      notes
-    );
+    const register = await cashRegisterDb.updateCashRegisterReconcile(registerId, user.id)
 
-    return { success: true, data: snapshot };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
-}
-
-/**
- * جلب لقطات الخزينة
- */
-export async function getCashSnapshotsAction(
-  registerId: string,
-  limit?: number
-): Promise<ActionResponse<CashRegisterSnapshot[]>> {
-  try {
-    if (!registerId) {
-      return { success: false, error: 'Register ID is required' };
-    }
-
-    const snapshots = await getCashSnapshots(registerId, limit);
-    return { success: true, data: snapshots };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    revalidatePath('/cash-register')
+    return { success: true, data: register }
+  } catch (error: any) {
+    console.error('reconcileCashRegisterAction error:', error)
+    return { success: false, error: 'فشل في توفيق الخزينة' }
   }
 }
 
 // ==================== SETTLEMENT ACTIONS ====================
 
 /**
- * إنشاء سجل تسوية
- */
-export async function createSettlementAction(
-  storeId: string,
-  registerId: string,
-  totalSales: number,
-  totalRefunds: number,
-  totalExpenses: number,
-  openingBalance: number,
-  closingBalance: number
-): Promise<ActionResponse<SettlementRecord>> {
-  try {
-    if (!storeId || !registerId) {
-      return { success: false, error: 'Store ID and Register ID are required' };
-    }
-
-    const settlement = await createSettlementRecord(
-      storeId,
-      registerId,
-      totalSales,
-      totalRefunds,
-      totalExpenses,
-      openingBalance,
-      closingBalance
-    );
-
-    return { success: true, data: settlement };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
-}
-
-/**
- * جلب سجلات التسوية
+ * Get settlement records for store
  */
 export async function getSettlementRecordsAction(
-  storeId: string,
   startDate?: Date,
   endDate?: Date
-): Promise<ActionResponse<SettlementRecord[]>> {
+): Promise<ActionResult<SettlementRecord[]>> {
   try {
-    if (!storeId) {
-      return { success: false, error: 'Store ID is required' };
+    const user = await authDb.getCurrentUser()
+    if (!user?.storeid) {
+      return { success: false, error: 'لا يوجد متجر مرتبط بحسابك' }
     }
 
-    const settlements = await getSettlementRecords(storeId, startDate, endDate);
-    return { success: true, data: settlements };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    const settlements = await cashRegisterDb.getSettlementRecordsByStore(
+      user.storeid,
+      startDate,
+      endDate
+    )
+    return { success: true, data: settlements }
+  } catch (error: any) {
+    console.error('getSettlementRecordsAction error:', error)
+    return { success: false, error: 'فشل في جلب التسويات' }
   }
 }
 
 /**
- * تحديث توفيق التسوية
+ * Reconcile settlement record
+ * 
+ * Flow:
+ * 1. Authorization - owner only
+ * 2. Validate settlement exists
+ * 3. Call DB updateSettlementReconcile
+ * 4. Triggers may create variance_record if difference > threshold
+ * 5. Revalidate cache
  */
-export async function updateSettlementReconciliationAction(
+export async function reconcileSettlementAction(
   settlementId: string,
-  reconciledByUserId: string,
   differenceReason?: string
-): Promise<ActionResponse<SettlementRecord>> {
+): Promise<ActionResult<SettlementRecord>> {
   try {
-    if (!settlementId || !reconciledByUserId) {
-      return {
-        success: false,
-        error: 'Settlement ID and User ID are required',
-      };
+    const user = await authDb.getCurrentUser()
+    if (!user?.storeid) {
+      return { success: false, error: 'لا يوجد متجر مرتبط بحسابك' }
     }
 
-    const settlement = await updateSettlementReconciliation(
-      settlementId,
-      reconciledByUserId,
-      differenceReason
-    );
+    if (user.role !== 'owner') {
+      return { success: false, error: 'غير مصرح لك بتوفيق التسويات' }
+    }
 
-    return { success: true, data: settlement };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    if (!settlementId) {
+      return { success: false, error: 'معرف التسوية مطلوب' }
+    }
+
+    if (differenceReason && differenceReason.length > 500) {
+      return { success: false, error: 'سبب الفرق طويل جداً' }
+    }
+
+    // Verify settlement exists
+    const settlement = await cashRegisterDb.getSettlementRecordById(settlementId)
+    if (!settlement) {
+      return { success: false, error: 'التسوية غير موجودة' }
+    }
+
+    // Call DB
+    const reconciled = await cashRegisterDb.updateSettlementReconcile(
+      settlementId,
+      user.id,
+      differenceReason
+    )
+
+    revalidatePath('/cash-register')
+    return { success: true, data: reconciled }
+  } catch (error: any) {
+    console.error('reconcileSettlementAction error:', error)
+    return { success: false, error: 'فشل في توفيق التسوية' }
+  }
+}
+
+// ==================== SNAPSHOT ACTIONS ====================
+
+/**
+ * Create manual snapshot of cash register
+ */
+export async function createCashSnapshotAction(
+  registerId: string,
+  notes?: string
+): Promise<ActionResult<CashRegisterSnapshot>> {
+  try {
+    const user = await authDb.getCurrentUser()
+    if (!user?.storeid) {
+      return { success: false, error: 'لا يوجد متجر مرتبط بحسابك' }
+    }
+
+    if (!registerId) {
+      return { success: false, error: 'معرف الخزينة مطلوب' }
+    }
+
+    const snapshot = await cashRegisterDb.insertCashSnapshot(
+      registerId,
+      'manual',
+      user.id,
+      notes
+    )
+
+    return { success: true, data: snapshot }
+  } catch (error: any) {
+    console.error('createCashSnapshotAction error:', error)
+    return { success: false, error: 'فشل في إنشاء لقطة الخزينة' }
+  }
+}
+
+/**
+ * Get cash snapshots for register
+ */
+export async function getCashSnapshotsAction(
+  registerId: string
+): Promise<ActionResult<CashRegisterSnapshot[]>> {
+  try {
+    const user = await authDb.getCurrentUser()
+    if (!user?.storeid) {
+      return { success: false, error: 'لا يوجد متجر مرتبط بحسابك' }
+    }
+
+    if (!registerId) {
+      return { success: false, error: 'معرف الخزينة مطلوب' }
+    }
+
+    const snapshots = await cashRegisterDb.getCashSnapshotsByRegister(registerId)
+    return { success: true, data: snapshots }
+  } catch (error: any) {
+    console.error('getCashSnapshotsAction error:', error)
+    return { success: false, error: 'فشل في جلب لقطات الخزينة' }
   }
 }

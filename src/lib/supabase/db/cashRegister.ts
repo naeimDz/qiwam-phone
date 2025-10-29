@@ -1,10 +1,9 @@
 // lib/supabase/db/cashRegister.ts
-// DB Layer - Cash register operations with detailed error handling
+// DB Layer - Cash register operations ONLY
+// NO BUSINESS LOGIC - Queries only
 
 import { createClientServer } from '@/lib/supabase'
 import { CashRegister, CashRegisterWithDetails, CashRegisterSnapshot, SettlementRecord } from '@/lib/types'
-
-type CashRegisterInsert = Omit<CashRegister, 'id' | 'createdat' | 'closed_at' | 'expected_balance' | 'difference'>
 
 // Error logging utility
 interface ErrorLog {
@@ -36,20 +35,18 @@ const logError = (functionName: string, error: any, context?: Record<string, any
 /**
  * Create new cash register (open)
  */
-export async function createCashRegister(
+export async function insertCashRegister(
   storeid: string,
   openedByUserId: string,
   openingBalance: number,
   notes?: string
 ): Promise<CashRegister> {
-  const functionName = 'createCashRegister'
+  const functionName = 'insertCashRegister'
 
   try {
     if (!storeid) throw new Error('storeid مطلوب')
     if (!openedByUserId) throw new Error('openedByUserId مطلوب')
     if (openingBalance < 0) throw new Error('opening_balance لا يمكن أن يكون سالب')
-
-    console.log(`[${functionName}] البدء: فتح خزينة جديدة، الرصيد=${openingBalance}`)
 
     const supabase = await createClientServer()
 
@@ -62,7 +59,7 @@ export async function createCashRegister(
           opened_at: new Date().toISOString(),
           opening_balance: openingBalance,
           status: 'open',
-          notes,
+          notes: notes || null,
           total_cash_in: 0,
           total_cash_out: 0,
           payment_count_in: 0,
@@ -79,10 +76,9 @@ export async function createCashRegister(
     }
 
     if (!data) {
-      throw new Error('فشل في إرجاع الخزينة المُنشأة')
+      throw new Error('فشل في إرجاع الخزينة المنشأة')
     }
 
-    console.log(`[${functionName}] تم بنجاح: الخزينة ${data.id}`)
     return data
   } catch (error: any) {
     logError(functionName, error, { storeid, openingBalance })
@@ -91,15 +87,13 @@ export async function createCashRegister(
 }
 
 /**
- * Get cash register by ID
+ * Get cash register by ID with related data
  */
 export async function getCashRegisterById(registerId: string): Promise<CashRegisterWithDetails | null> {
   const functionName = 'getCashRegisterById'
 
   try {
     if (!registerId) throw new Error('registerId مطلوب')
-
-    console.log(`[${functionName}] البدء: registerId=${registerId}`)
 
     const supabase = await createClientServer()
 
@@ -116,27 +110,20 @@ export async function getCashRegisterById(registerId: string): Promise<CashRegis
 
     if (error) {
       if (error.code === 'PGRST116') {
-        console.log(`[${functionName}] الخزينة غير موجودة: ${registerId}`)
         return null
       }
       logError(functionName, error, { registerId })
       throw error
     }
 
-    if (!data) {
-      console.log(`[${functionName}] لا توجد بيانات للخزينة: ${registerId}`)
-      return null
-    }
+    if (!data) return null
 
-    const result = {
+    return {
       ...data,
       opened_by_name: data.opened_by_user?.fullname || 'Unknown',
       closed_by_name: data.closed_by_user?.fullname || null,
       reconciled_by_name: data.reconciled_by_user?.fullname || null
     }
-
-    console.log(`[${functionName}] تم بنجاح`)
-    return result
   } catch (error: any) {
     logError(functionName, error, { registerId })
     throw new Error(`فشل في جلب الخزينة: ${error?.message || 'خطأ غير معروف'}`)
@@ -144,15 +131,13 @@ export async function getCashRegisterById(registerId: string): Promise<CashRegis
 }
 
 /**
- * Get currently open cash register
+ * Get currently open cash register for store
  */
 export async function getOpenCashRegister(storeid: string): Promise<CashRegisterWithDetails | null> {
   const functionName = 'getOpenCashRegister'
 
   try {
     if (!storeid) throw new Error('storeid مطلوب')
-
-    console.log(`[${functionName}] البدء: جلب الخزينة المفتوحة`)
 
     const supabase = await createClientServer()
 
@@ -169,26 +154,20 @@ export async function getOpenCashRegister(storeid: string): Promise<CashRegister
 
     if (error) {
       if (error.code === 'PGRST116') {
-        console.log(`[${functionName}] لا توجد خزينة مفتوحة`)
         return null
       }
       logError(functionName, error, { storeid })
       throw error
     }
 
-    if (!data) {
-      return null
-    }
+    if (!data) return null
 
-    const result = {
+    return {
       ...data,
       opened_by_name: data.opened_by_user?.fullname || 'Unknown',
       closed_by_name: null,
       reconciled_by_name: null
     }
-
-    console.log(`[${functionName}] تم بنجاح`)
-    return result
   } catch (error: any) {
     logError(functionName, error, { storeid })
     throw new Error(`فشل في جلب الخزينة المفتوحة: ${error?.message || 'خطأ غير معروف'}`)
@@ -198,19 +177,16 @@ export async function getOpenCashRegister(storeid: string): Promise<CashRegister
 /**
  * Get all cash registers for a store
  */
-export async function getStoreCashRegisters(
+export async function getCashRegistersByStore(
   storeid: string,
   status?: 'open' | 'closed',
   limit: number = 50,
   offset: number = 0
 ): Promise<CashRegisterWithDetails[]> {
-  const functionName = 'getStoreCashRegisters'
+  const functionName = 'getCashRegistersByStore'
 
   try {
     if (!storeid) throw new Error('storeid مطلوب')
-    if (limit < 1 || limit > 500) throw new Error('limit يجب أن يكون بين 1 و 500')
-
-    console.log(`[${functionName}] البدء: storeid=${storeid}, status=${status || 'الكل'}`)
 
     const supabase = await createClientServer()
 
@@ -238,19 +214,15 @@ export async function getStoreCashRegisters(
     }
 
     if (!data || data.length === 0) {
-      console.log(`[${functionName}] لا توجد خزائن`)
       return []
     }
 
-    const result = data.map(cr => ({
+    return data.map(cr => ({
       ...cr,
       opened_by_name: cr.opened_by_user?.fullname || 'Unknown',
       closed_by_name: cr.closed_by_user?.fullname || null,
       reconciled_by_name: cr.reconciled_by_user?.fullname || null
     }))
-
-    console.log(`[${functionName}] تم بنجاح: ${result.length} خزينة`)
-    return result
   } catch (error: any) {
     logError(functionName, error, { storeid, status })
     throw new Error(`فشل في جلب الخزائن: ${error?.message || 'خطأ غير معروف'}`)
@@ -262,22 +234,21 @@ export async function getStoreCashRegisters(
  * ✅ Triggers automatically:
  *    - calculate expected_balance
  *    - calculate difference
+ *    - create settlement_record
  *    - insert audit_log
  */
-export async function closeCashRegister(
+export async function updateCashRegisterClose(
   registerId: string,
   closedByUserId: string,
   closingBalance: number,
   notes?: string
 ): Promise<CashRegister> {
-  const functionName = 'closeCashRegister'
+  const functionName = 'updateCashRegisterClose'
 
   try {
     if (!registerId) throw new Error('registerId مطلوب')
     if (!closedByUserId) throw new Error('closedByUserId مطلوب')
     if (closingBalance < 0) throw new Error('closing_balance لا يمكن أن يكون سالب')
-
-    console.log(`[${functionName}] البدء: إغلاق الخزينة، الرصيد=${closingBalance}`)
 
     const supabase = await createClientServer()
 
@@ -288,10 +259,10 @@ export async function closeCashRegister(
         closed_at: new Date().toISOString(),
         closing_balance: closingBalance,
         status: 'closed',
-        notes
+        notes: notes || null
       })
       .eq('id', registerId)
-      .is('status', 'open')
+      .eq('status', 'open')
       .select('*')
       .single()
 
@@ -304,10 +275,9 @@ export async function closeCashRegister(
     }
 
     if (!data) {
-      throw new Error('فشل في إرجاع الخزينة المُغلقة')
+      throw new Error('فشل في إرجاع الخزينة المغلقة')
     }
 
-    console.log(`[${functionName}] تم بنجاح: الخزينة مغلقة`)
     return data
   } catch (error: any) {
     logError(functionName, error, { registerId, closingBalance })
@@ -318,18 +288,15 @@ export async function closeCashRegister(
 /**
  * Reconcile cash register
  */
-export async function reconcileCashRegister(
+export async function updateCashRegisterReconcile(
   registerId: string,
-  reconciledByUserId: string,
-  differenceReason?: string
+  reconciledByUserId: string
 ): Promise<CashRegister> {
-  const functionName = 'reconcileCashRegister'
+  const functionName = 'updateCashRegisterReconcile'
 
   try {
     if (!registerId) throw new Error('registerId مطلوب')
     if (!reconciledByUserId) throw new Error('reconciledByUserId مطلوب')
-
-    console.log(`[${functionName}] البدء: توفيق الخزينة ${registerId}`)
 
     const supabase = await createClientServer()
 
@@ -352,10 +319,9 @@ export async function reconcileCashRegister(
     }
 
     if (!data) {
-      throw new Error('فشل في إرجاع الخزينة المُحدثة')
+      throw new Error('فشل في إرجاع الخزينة المحدثة')
     }
 
-    console.log(`[${functionName}] تم بنجاح: تم التوفيق`)
     return data
   } catch (error: any) {
     logError(functionName, error, { registerId })
@@ -363,35 +329,32 @@ export async function reconcileCashRegister(
   }
 }
 
-// ==================== CASH REGISTER SNAPSHOT OPERATIONS ====================
+// ==================== CASH REGISTER SNAPSHOT OPERATIONS (READ ONLY) ====================
 
 /**
- * Create cash register snapshot (automatic or manual)
+ * Create cash register snapshot
+ * ✅ Called manually or by triggers for audit trail
  */
-export async function createCashSnapshot(
+export async function insertCashSnapshot(
   registerId: string,
-  snapshotType: 'automatic' | 'manual' | 'reconciliation' | 'shift_close' = 'automatic',
+  snapshotType: 'automatic' | 'manual' | 'reconciliation' | 'shift_close' = 'manual',
   createdBy?: string,
   notes?: string
 ): Promise<CashRegisterSnapshot> {
-  const functionName = 'createCashSnapshot'
+  const functionName = 'insertCashSnapshot'
 
   try {
     if (!registerId) throw new Error('registerId مطلوب')
-    if (!['automatic', 'manual', 'reconciliation', 'shift_close'].includes(snapshotType)) 
-      throw new Error('snapshotType غير صحيح')
-
-    console.log(`[${functionName}] البدء: إنشاء لقطة، النوع=${snapshotType}`)
 
     const supabase = await createClientServer()
 
-    // Get current register balance
+    // Get current register for balance
     const register = await getCashRegisterById(registerId)
     if (!register) {
       throw new Error('الخزينة غير موجودة')
     }
 
-    const balanceAtTime = register.closing_balance || register.opening_balance
+    const balanceAtTime = register.closing_balance ?? register.opening_balance
 
     const { data, error } = await supabase
       .from('cash_register_snapshots')
@@ -401,8 +364,8 @@ export async function createCashSnapshot(
           snapshot_time: new Date().toISOString(),
           balance_at_time: balanceAtTime,
           snapshot_type: snapshotType,
-          created_by: createdBy,
-          notes
+          created_by: createdBy || null,
+          notes: notes || null
         }
       ])
       .select('*')
@@ -414,10 +377,9 @@ export async function createCashSnapshot(
     }
 
     if (!data) {
-      throw new Error('فشل في إرجاع اللقطة المُنشأة')
+      throw new Error('فشل في إرجاع اللقطة المنشأة')
     }
 
-    console.log(`[${functionName}] تم بنجاح: اللقطة ${data.id}`)
     return data
   } catch (error: any) {
     logError(functionName, error, { registerId, snapshotType })
@@ -428,18 +390,15 @@ export async function createCashSnapshot(
 /**
  * Get cash register snapshots
  */
-export async function getCashSnapshots(
+export async function getCashSnapshotsByRegister(
   registerId: string,
   limit: number = 50,
   offset: number = 0
 ): Promise<CashRegisterSnapshot[]> {
-  const functionName = 'getCashSnapshots'
+  const functionName = 'getCashSnapshotsByRegister'
 
   try {
     if (!registerId) throw new Error('registerId مطلوب')
-    if (limit < 1 || limit > 500) throw new Error('limit يجب أن يكون بين 1 و 500')
-
-    console.log(`[${functionName}] البدء: جلب لقطات الخزينة`)
 
     const supabase = await createClientServer()
 
@@ -455,13 +414,7 @@ export async function getCashSnapshots(
       throw error
     }
 
-    if (!data || data.length === 0) {
-      console.log(`[${functionName}] لا توجد لقطات`)
-      return []
-    }
-
-    console.log(`[${functionName}] تم بنجاح: ${data.length} لقطة`)
-    return data
+    return data || []
   } catch (error: any) {
     logError(functionName, error, { registerId })
     throw new Error(`فشل في جلب اللقطات: ${error?.message || 'خطأ غير معروف'}`)
@@ -472,9 +425,9 @@ export async function getCashSnapshots(
 
 /**
  * Create settlement record
- * ✅ Called after closing cash register
+ * ✅ Called automatically by trigger when register closed
  */
-export async function createSettlementRecord(
+export async function insertSettlementRecord(
   storeid: string,
   registerId: string,
   totalSales: number,
@@ -484,15 +437,11 @@ export async function createSettlementRecord(
   closingBalance: number,
   differenceReason?: string
 ): Promise<SettlementRecord> {
-  const functionName = 'createSettlementRecord'
+  const functionName = 'insertSettlementRecord'
 
   try {
     if (!storeid) throw new Error('storeid مطلوب')
     if (!registerId) throw new Error('registerId مطلوب')
-    if (openingBalance < 0) throw new Error('opening_balance لا يمكن أن يكون سالب')
-    if (closingBalance < 0) throw new Error('closing_balance لا يمكن أن يكون سالب')
-
-    console.log(`[${functionName}] البدء: إنشاء تسوية جديدة`)
 
     const supabase = await createClientServer()
 
@@ -516,7 +465,7 @@ export async function createSettlementRecord(
           closing_balance: closingBalance,
           expected_balance: expectedBalance,
           difference,
-          difference_reason: differenceReason,
+          difference_reason: differenceReason || null,
           reconciled: false
         }
       ])
@@ -529,10 +478,9 @@ export async function createSettlementRecord(
     }
 
     if (!data) {
-      throw new Error('فشل في إرجاع التسوية المُنشأة')
+      throw new Error('فشل في إرجاع التسوية المنشأة')
     }
 
-    console.log(`[${functionName}] تم بنجاح: التسوية ${data.id}`)
     return data
   } catch (error: any) {
     logError(functionName, error, { storeid, registerId })
@@ -543,20 +491,17 @@ export async function createSettlementRecord(
 /**
  * Get settlement records for a store
  */
-export async function getSettlementRecords(
+export async function getSettlementRecordsByStore(
   storeid: string,
   startDate?: Date,
   endDate?: Date,
   limit: number = 50,
   offset: number = 0
 ): Promise<SettlementRecord[]> {
-  const functionName = 'getSettlementRecords'
+  const functionName = 'getSettlementRecordsByStore'
 
   try {
     if (!storeid) throw new Error('storeid مطلوب')
-    if (limit < 1 || limit > 500) throw new Error('limit يجب أن يكون بين 1 و 500')
-
-    console.log(`[${functionName}] البدء: جلب التسويات`)
 
     const supabase = await createClientServer()
 
@@ -582,13 +527,7 @@ export async function getSettlementRecords(
       throw error
     }
 
-    if (!data || data.length === 0) {
-      console.log(`[${functionName}] لا توجد تسويات`)
-      return []
-    }
-
-    console.log(`[${functionName}] تم بنجاح: ${data.length} تسوية`)
-    return data
+    return data || []
   } catch (error: any) {
     logError(functionName, error, { storeid, startDate, endDate })
     throw new Error(`فشل في جلب التسويات: ${error?.message || 'خطأ غير معروف'}`)
@@ -596,15 +535,13 @@ export async function getSettlementRecords(
 }
 
 /**
- * Get settlement record by ID
+ * Get settlement by ID
  */
-export async function getSettlementById(settlementId: string): Promise<SettlementRecord | null> {
-  const functionName = 'getSettlementById'
+export async function getSettlementRecordById(settlementId: string): Promise<SettlementRecord | null> {
+  const functionName = 'getSettlementRecordById'
 
   try {
     if (!settlementId) throw new Error('settlementId مطلوب')
-
-    console.log(`[${functionName}] البدء: settlementId=${settlementId}`)
 
     const supabase = await createClientServer()
 
@@ -616,19 +553,13 @@ export async function getSettlementById(settlementId: string): Promise<Settlemen
 
     if (error) {
       if (error.code === 'PGRST116') {
-        console.log(`[${functionName}] التسوية غير موجودة: ${settlementId}`)
         return null
       }
       logError(functionName, error, { settlementId })
       throw error
     }
 
-    if (!data) {
-      return null
-    }
-
-    console.log(`[${functionName}] تم بنجاح`)
-    return data
+    return data || null
   } catch (error: any) {
     logError(functionName, error, { settlementId })
     throw new Error(`فشل في جلب التسوية: ${error?.message || 'خطأ غير معروف'}`)
@@ -636,20 +567,18 @@ export async function getSettlementById(settlementId: string): Promise<Settlemen
 }
 
 /**
- * Mark settlement as reconciled
+ * Update settlement reconciliation
  */
-export async function reconcileSettlement(
+export async function updateSettlementReconcile(
   settlementId: string,
   reconciledByUserId: string,
   differenceReason?: string
 ): Promise<SettlementRecord> {
-  const functionName = 'reconcileSettlement'
+  const functionName = 'updateSettlementReconcile'
 
   try {
     if (!settlementId) throw new Error('settlementId مطلوب')
     if (!reconciledByUserId) throw new Error('reconciledByUserId مطلوب')
-
-    console.log(`[${functionName}] البدء: توفيق التسوية ${settlementId}`)
 
     const supabase = await createClientServer()
 
@@ -659,7 +588,7 @@ export async function reconcileSettlement(
         reconciled: true,
         reconciled_by: reconciledByUserId,
         reconciled_at: new Date().toISOString(),
-        difference_reason: differenceReason
+        difference_reason: differenceReason || null
       })
       .eq('id', settlementId)
       .select('*')
@@ -674,10 +603,9 @@ export async function reconcileSettlement(
     }
 
     if (!data) {
-      throw new Error('فشل في إرجاع التسوية المُحدثة')
+      throw new Error('فشل في إرجاع التسوية المحدثة')
     }
 
-    console.log(`[${functionName}] تم بنجاح: تم التوفيق`)
     return data
   } catch (error: any) {
     logError(functionName, error, { settlementId })
