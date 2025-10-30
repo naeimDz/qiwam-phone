@@ -225,8 +225,8 @@ export async function reconcilePaymentAction(paymentId: string): Promise<ActionR
  * Get payments summary by method for reporting
  */
 export async function getPaymentsSummaryAction(
-  startDate: Date,
-  endDate: Date
+  startDate?: Date,
+  endDate?: Date
 ): Promise<ActionResult<any>> {
   try {
     const user = await authDb.getCurrentUser()

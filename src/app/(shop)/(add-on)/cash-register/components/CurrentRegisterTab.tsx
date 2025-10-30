@@ -1,11 +1,10 @@
-// ==================== FILE 5: components/CurrentRegisterTab.tsx ====================
-// Current Register Content
-
-'use client'
+// ==================== FILE 1: components/CurrentRegisterTab.tsx ====================
 
 import { Lock, Unlock } from 'lucide-react'
 import { CashRegister } from '@/lib/types/index'
-import { PaymentsList } from './PaymentsList'
+import { useEffect, useState } from 'react'
+import { getCashMovementsAction } from '@/lib/actions/payment.actions'
+import { PaymentsListClient } from './PaymentsListClient'
 
 interface Props {
   currentRegister: CashRegister | null
@@ -20,6 +19,17 @@ export function CurrentRegisterTab({
   userId,
   onOpenRegister 
 }: Props) {
+  const [movements, setMovements] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    if (!currentRegister) return
+    
+    getCashMovementsAction().then(result => {
+      if (result.success) setMovements(result.data || [])
+      setLoading(false)
+    })
+  }, [currentRegister?.id])
+  
   if (!currentRegister) {
     return (
       <div className="bg-bg-secondary border border-border rounded-xl p-12 text-center">
@@ -36,7 +46,5 @@ export function CurrentRegisterTab({
       </div>
     )
   }
-
-  return <PaymentsList registerId={currentRegister.id} />
+  return <PaymentsListClient movements={movements} registerId={currentRegister.id} />
 }
-

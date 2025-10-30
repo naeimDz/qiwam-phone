@@ -28,8 +28,6 @@ export function OpenRegisterModal({ storeId, userId, onClose, onSuccess }: Props
     setLoading(true)
     
     const result = await openCashRegisterAction(
-      storeId,
-      userId,
       parseFloat(openingBalance)
     )
 
@@ -40,7 +38,7 @@ export function OpenRegisterModal({ storeId, userId, onClose, onSuccess }: Props
       onSuccess(result.data)
       onClose()
     } else {
-      alert(result.error || 'فشل فتح الصندوق')
+      alert('فشل فتح الصندوق')
     }
   }
 

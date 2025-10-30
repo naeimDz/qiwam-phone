@@ -301,7 +301,6 @@ export async function insertSale(data: SaleInsert): Promise<Sale> {
         ...data,
         total: 0,
         paidamount: 0,
-        remainingamount: 0
       }])
       .select('*')
       .single()

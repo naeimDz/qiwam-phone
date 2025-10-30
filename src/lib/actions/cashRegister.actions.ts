@@ -135,7 +135,6 @@ export async function closeCashRegisterAction(
     if (closingBalance < 0) {
       return { success: false, error: 'الرصيد الختامي لا يمكن أن يكون سالب' }
     }
-
     // Verify register exists and is open
     const register = await cashRegisterDb.getCashRegisterById(registerId)
     if (!register) {

@@ -10,12 +10,11 @@ import { closeCashRegisterAction } from '@/lib/actions/cashRegister.actions'
 
 interface Props {
   register: CashRegister
-  userId: string
   onClose: () => void
   onSuccess: (register: any) => void
 }
 
-export function CloseRegisterModal({ register, userId, onClose, onSuccess }: Props) {
+export function CloseRegisterModal({ register, onClose, onSuccess }: Props) {
   const [actualBalance, setActualBalance] = useState('')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
@@ -37,7 +36,6 @@ export function CloseRegisterModal({ register, userId, onClose, onSuccess }: Pro
     
     const result = await closeCashRegisterAction(
       register.id,
-      userId,
       parseFloat(actualBalance),
       notes || undefined
     )
@@ -49,7 +47,7 @@ export function CloseRegisterModal({ register, userId, onClose, onSuccess }: Pro
       onSuccess(result.data)
       onClose()
     } else {
-      alert(result.error || 'فشل إغلاق الصندوق')
+      alert('فشل إغلاق الصندوق')
     }
   }
 
