@@ -2,10 +2,8 @@
 // DB Layer - Expense transactions with detailed error handling
 
 import { createClientServer } from '@/lib/supabase'
-import { Expense, ExpenseWithDetails } from '@/lib/types'
+import { Expense, ExpenseInsert, ExpenseWithDetails, ExpenseUpdate } from '@/lib/types/expense'
 
-type ExpenseInsert = Omit<Expense, 'id' | 'createdat' | 'deleted_at'>
-type ExpenseUpdate = Partial<Omit<Expense, 'id' | 'storeid' | 'createdat' | 'deleted_at'>>
 
 // Error logging utility
 interface ErrorLog {
@@ -54,7 +52,7 @@ export async function getExpensesByStore(
       .from('expense')
       .select(`
         *,
-        created_by:createdby(fullname),
+
         paid_by_user:paid_by(fullname)
       `)
       .eq('storeid', storeid)
@@ -109,7 +107,7 @@ export async function getExpensesByStatus(
       .from('expense')
       .select(`
         *,
-        created_by:createdby(fullname),
+
         paid_by_user:paid_by(fullname)
       `)
       .eq('storeid', storeid)
@@ -159,7 +157,7 @@ export async function getExpenseById(expenseId: string): Promise<ExpenseWithDeta
       .from('expense')
       .select(`
         *,
-        created_by:createdby(fullname),
+
         paid_by_user:paid_by(fullname)
       `)
       .eq('id', expenseId)
@@ -217,7 +215,7 @@ export async function getExpensesByDateRange(
       .from('expense')
       .select(`
         *,
-        created_by:createdby(fullname),
+
         paid_by_user:paid_by(fullname)
       `)
       .eq('storeid', storeid)
@@ -271,7 +269,6 @@ export async function getExpensesByCategory(
       .from('expense')
       .select(`
         *,
-        created_by:createdby(fullname),
         paid_by_user:paid_by(fullname)
       `)
       .eq('storeid', storeid)
