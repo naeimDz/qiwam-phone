@@ -3,6 +3,7 @@
 
 import { createClientServer } from '@/lib/supabase'
 import { Store, StoreSettings } from '@/lib/types'
+import { cache } from 'react'
 
 // Error logging utility
 interface ErrorLog {
@@ -34,13 +35,13 @@ const logError = (functionName: string, error: any, context?: Record<string, any
 /**
  * Get store by ID
  */
-export async function getStoreById(storeid: string): Promise<Store | null> {
+export const getStoreById = cache(async (storeid: string) => {
   const functionName = 'getStoreById'
   
   try {
     if (!storeid) throw new Error('storeid مطلوب')
 
-    console.log(`[${functionName}] البدء: جلب المتجر ${storeid}`)
+    console.log(`[${functionName}] 🚀 RUNNING (Cache Miss):البدء: جلب المتجر ${storeid}`)
     
     const supabase = await createClientServer()
     
@@ -70,7 +71,7 @@ export async function getStoreById(storeid: string): Promise<Store | null> {
     logError(functionName, error, { storeid })
     throw new Error(`فشل في جلب المتجر: ${error?.message || 'خطأ غير معروف'}`)
   }
-}
+})
 
 /**
  * Check if store is active and within subscription period
@@ -118,13 +119,13 @@ export async function isStoreActive(storeid: string): Promise<boolean> {
 /**
  * Get store settings
  */
-export async function getStoreSettings(storeid: string): Promise<StoreSettings | null> {
+export const getStoreSettings= cache(async(storeid: string)=> {
   const functionName = 'getStoreSettings'
   
   try {
     if (!storeid) throw new Error('storeid مطلوب')
 
-    console.log(`[${functionName}] البدء: جلب إعدادات المتجر ${storeid}`)
+    console.log(`[${functionName}]  🚀 RUNNING (Cache Miss): البدء: جلب إعدادات المتجر ${storeid}`)
     
     const supabase = await createClientServer()
     
@@ -155,7 +156,7 @@ export async function getStoreSettings(storeid: string): Promise<StoreSettings |
     logError(functionName, error, { storeid })
     throw new Error(`فشل في جلب الإعدادات: ${error?.message || 'خطأ غير معروف'}`)
   }
-}
+})
 
 /**
  * Update store settings
@@ -262,14 +263,13 @@ export async function createStoreSettings(storeid: string): Promise<StoreSetting
 /**
  * Get store with settings (combined query)
  */
-export async function getStoreWithSettings(storeid: string) {
+export const getStoreWithSettings = cache(async (storeid: string) => {
   const functionName = 'getStoreWithSettings'
   
   try {
     if (!storeid) throw new Error('storeid مطلوب')
+    console.log(`[${functionName}] 🚀 RUNNING (Cache Miss): جلب المتجر والإعدادات لـ ${storeid}`)    
 
-    console.log(`[${functionName}] البدء: جلب المتجر والإعدادات`)
-    
     const [store, settings] = await Promise.all([
       getStoreById(storeid),
       getStoreSettings(storeid)
@@ -285,4 +285,4 @@ export async function getStoreWithSettings(storeid: string) {
     logError(functionName, error, { storeid })
     throw new Error(`فشل في جلب بيانات المتجر: ${error?.message || 'خطأ غير معروف'}`)
   }
-}
+})

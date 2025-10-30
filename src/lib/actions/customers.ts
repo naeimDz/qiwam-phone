@@ -5,10 +5,8 @@ import { revalidatePath } from 'next/cache'
 import * as customersDb from '@/lib/supabase/db/customers'
 import * as authDb from '@/lib/supabase/db/auth'
 import { Customer } from '@/lib/types'
+import { ActionResult } from '../types/action.types'
 
-type ActionResult<T = void> = 
-  | { success: true; data: T }
-  | { success: false; error: string }
 
 /**
  * Get all customers for current user's store

@@ -1,17 +1,30 @@
 // app/(dashboard)/admin/customers/page.tsx
 import React from 'react'
 import CustomersPageClient from './CustomersPageClient'
-import { getCustomersAction } from '@/lib/actions/customers'
 import type { Customer } from '@/lib/types'
+import { getCurrentUser } from '@/lib/supabase/db/auth'
+import { redirect } from 'next/navigation'
+import { getCustomersByStore } from '@/lib/supabase/db/customers'
 
 export default async function CustomersPage() {
-  // جلب العملاء على الـ Server بس
-  const res = await getCustomersAction(false)
-  const customers: Customer[] = res.success ? res.data : []
+  const user = await getCurrentUser() 
+  
+  if (!user) {
+    redirect('/login') // حماية إضافية على مستوى الصفحة
+  }
+  
+  if (!user.storeid) {
+    // عرض رسالة خطأ المتجر
+    return <div>خطأ: لا يوجد متجر مرتبط.</div>
+  }
 
+  // 2. جلب البيانات باستخدام storeid (استدعاء مباشر لدوال الـ DB)
+  // ⚠️ يجب التأكد أن getCustomersByStore مغلفة بـ cache أيضاً!
+  const customers: Customer[] = await getCustomersByStore(user.storeid, false)
   return (
     <div className="min-h-screen">
-      <CustomersPageClient initialCustomers={customers} />
+      <CustomersPageClient 
+        initialCustomers={customers} />
     </div>
   )
 }

@@ -6,14 +6,13 @@ import { Plus, Users, AlertCircle, Search, Edit2, Trash2, X, Check, Phone, MapPi
 import { StatsCard } from '@/components/ui/StatsCard'
 import type { Customer } from '@/lib/types'
 import {
-  createCustomerFormAction,
-  updateCustomerFormAction,
-  deleteCustomerFormAction,
-  toggleCustomerActiveFormAction
-} from './actions'
+  createCustomerAction,
+  updateCustomerAction,
+  deleteCustomerAction,
+  toggleCustomerActiveAction,
+} from '@/lib/actions/customers.actions'
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
-
 interface CustomersManagementProps {
   initialCustomers: Customer[]
 }
@@ -25,7 +24,6 @@ export default function CustomersManagement({ initialCustomers }: CustomersManag
   const [editing, setEditing] = useState<Customer | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterActive, setFilterActive] = useState<string>('all')
-
   const [formState, setFormState] = useState({
     fullname: '',
     phone: '',
@@ -84,7 +82,8 @@ export default function CustomersManagement({ initialCustomers }: CustomersManag
     setShowAddModal(true)
   }
 
-  const handlePostActionRefresh = () => {
+
+const handlePostActionRefresh = () => {
     startTransition(() => {
       router.refresh()
     })
@@ -92,6 +91,44 @@ export default function CustomersManagement({ initialCustomers }: CustomersManag
     setEditing(null)
   }
 
+  const handleCreateCustomer = async (formData: FormData) => {
+    const result = await createCustomerAction(formData)
+    if (result.success) {
+      handlePostActionRefresh()
+    } else {
+      alert(result.error)
+    }
+  }
+
+  const handleUpdateCustomer = async (formData: FormData) => {
+    if (!editing) return
+    const result = await updateCustomerAction(editing.id, formData)
+    if (result.success) {
+      handlePostActionRefresh()
+    } else {
+      alert(result.error)
+    }
+  }
+
+  const handleDeleteCustomer = async (customerId: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذا العميل؟')) return
+    
+    const result = await deleteCustomerAction(customerId)
+    if (result.success) {
+      handlePostActionRefresh()
+    } else {
+      alert(result.error)
+    }
+  }
+
+  const handleToggleActive = async (customerId: string, active: boolean) => {
+    const result = await toggleCustomerActiveAction(customerId, active)
+    if (result.success) {
+      handlePostActionRefresh()
+    } else {
+      alert(result.error)
+    }
+  }
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
@@ -208,7 +245,7 @@ export default function CustomersManagement({ initialCustomers }: CustomersManag
                         {/* Delete form */}
                         <form
                           action={async (formData: FormData) => {
-                            await deleteCustomerFormAction(formData);
+                            await handleDeleteCustomer(c.id);
                           }}
                           onSubmit={() => { handlePostActionRefresh() }}
                           className="inline-block"
@@ -229,7 +266,7 @@ export default function CustomersManagement({ initialCustomers }: CustomersManag
                         {/* Toggle active form */}
                         <form
                           action={async (formData: FormData) => {
-                            await toggleCustomerActiveFormAction(formData);
+                            await handleToggleActive(c.id, !c.active);
                             handlePostActionRefresh();
                           }}
                           onSubmit={() => { handlePostActionRefresh() }}
@@ -276,7 +313,7 @@ export default function CustomersManagement({ initialCustomers }: CustomersManag
                 onSubmit={async (e) => {
                   e.preventDefault();
                   const formData = new FormData(e.currentTarget);
-                  await createCustomerFormAction(formData);
+                  await handleCreateCustomer(formData);
                   handlePostActionRefresh();
                 }}
               >
@@ -363,7 +400,7 @@ export default function CustomersManagement({ initialCustomers }: CustomersManag
             {editing && (
               <form
                 action={async (formData: FormData) => {
-                  await updateCustomerFormAction(formData);
+                  await handleUpdateCustomer(formData);
                 }}
                 onSubmit={() => handlePostActionRefresh()}
               >

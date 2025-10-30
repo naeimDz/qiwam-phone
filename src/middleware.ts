@@ -3,7 +3,7 @@
 // ✅ Allows public auth pages without protection
 // ✅ Handles reset-password properly
 import { NextRequest, NextResponse } from 'next/server'
-import { updateSession } from '@/lib/supabase/updateSession'
+//import { updateSession } from '@/lib/supabase/updateSession'
 import { handleAuthMiddleware } from '@/lib/supabase/handleAuthMiddleware'
 
 export async function middleware(request: NextRequest) {
@@ -16,7 +16,7 @@ export async function middleware(request: NextRequest) {
 
   // ✅ For ALL other paths (including auth pages like /login, /signup):
   // 1) Refresh tokens and update cookies
-  const refreshResponse = await updateSession(request)
+  //const refreshResponse = await updateSession(request)
 
   // 2) Run auth pipeline which handles:
   //    - Redirecting logged-in users away from /login, /signup
@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
 
   // If pipeline returned a response (redirect or modified), use it
   // Otherwise use refreshResponse (which may contain updated cookies)
-  return pipelineResponse ?? refreshResponse
+  return pipelineResponse //?? refreshResponse
 }
 
 export const config = {

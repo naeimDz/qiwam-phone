@@ -9,6 +9,7 @@ import {
   getCustomerDebtsAction,
   getHighRiskCustomersAction
 } from '@/lib/actions/customers'
+
 import type { TopCustomer, CustomerDebt } from '@/lib/supabase/db/customers'
 
 export default function CustomersAnalytics() {

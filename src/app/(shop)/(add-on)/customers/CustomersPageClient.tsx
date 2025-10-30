@@ -1,4 +1,4 @@
-// app/(dashboard)/admin/customers/CustomersPageClient.tsx
+// app/(dashboard)/customers/CustomersPageClient.tsx
 'use client'
 
 import React, { useState } from 'react'
@@ -8,10 +8,12 @@ import CustomersManagement from './CustomersManagement'
 import type { Customer } from '@/lib/types'
 
 interface CustomersPageClientProps {
+  storeId?: string;
+  userId?: string;
   initialCustomers: Customer[]
 }
 
-export default function CustomersPageClient({ initialCustomers }: CustomersPageClientProps) {
+export default function CustomersPageClient({initialCustomers }: CustomersPageClientProps) {
   const [activeTab, setActiveTab] = useState<'analytics' | 'management'>('analytics')
 
   const tabs = [

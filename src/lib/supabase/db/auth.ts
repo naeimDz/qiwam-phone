@@ -3,6 +3,7 @@
 
 import { AuthUser, UserProfile } from '@/lib/types'
 import { createClientServer } from '@/lib/supabase'
+import { cache } from 'react'
 
 
 // Error logging utility
@@ -36,12 +37,11 @@ const logError = (functionName: string, error: any, context?: Record<string, any
  * Get current authenticated user with store info
  * Foundation - every operation starts here
  */
-export async function getCurrentUser(): Promise<AuthUser | null> {
+export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
   const functionName = 'getCurrentUser'
   
   try {
-    console.log(`[${functionName}] البدء: جلب المستخدم الحالي`)
-    
+    console.log(`[${functionName}] 🚀 RUNNING (Cache Miss): جلب المستخدم الفعلي`)
     const supabase = await createClientServer()
     
     // Get auth user
@@ -89,7 +89,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     logError(functionName, error)
     return null
   }
-}
+})
 
 /**
  * Get user by ID

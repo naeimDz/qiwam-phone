@@ -71,3 +71,18 @@ export async function executeAction<T>(
     return failure(error instanceof Error ? error.message : 'حدث خطأ')
   }
 }
+
+
+/**
+ * ✅ Helper: استخراج البيانات من FormData بشكل صحيح
+ */
+export function parseFormData(formData: FormData): Record<string, unknown> {
+  const data: Record<string, unknown> = {}
+  
+  for (const [key, value] of formData.entries()) {
+    // تحويل empty strings إلى null (للـ optional fields)
+    data[key] = value === '' ? null : value
+  }
+  
+  return data
+}
