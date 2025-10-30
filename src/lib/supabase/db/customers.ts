@@ -431,7 +431,7 @@ export async function getTopCustomers(storeid: string, limit: number = 10): Prom
     const { data, error } = await supabase
       .from('v_top_customers')
       .select('*')
-      .eq('storeid', storeid)
+      //.eq('storeid', storeid)
       .order('total_spent', { ascending: false })
       .limit(limit)
 
@@ -480,7 +480,7 @@ export async function getCustomerDebts(storeid: string): Promise<CustomerDebt[]>
     const { data, error } = await supabase
       .from('v_customer_debts')
       .select('*')
-      .eq('storeid', storeid)
+      //.eq('storeid', storeid)
       .order('total_debt', { ascending: false })
 
     if (error) {
@@ -521,7 +521,7 @@ export async function getCustomerDebtsByThreshold(
     const { data, error } = await supabase
       .from('v_customer_debts')
       .select('*')
-      .eq('storeid', storeid)
+      //.eq('storeid', storeid)
       .gte('total_debt', minDebt)
       .order('total_debt', { ascending: false })
 
@@ -563,7 +563,7 @@ export async function getHighRiskCustomers(
     const { data, error } = await supabase
       .from('v_top_customers')
       .select('*')
-      .eq('storeid', storeid)
+      //.eq('storeid', storeid)
 
     if (error) {
       logError(functionName, error, { storeid, riskThreshold })
@@ -604,7 +604,7 @@ export async function getAllCustomersWithAnalytics(storeid: string) {
     const { data: topCustomers, error: error1 } = await supabase
       .from('v_top_customers')
       .select('*')
-      .eq('storeid', storeid)
+      //.eq('storeid', storeid)
 
     if (error1) {
       logError(`${functionName}::getTopCustomers`, error1, { storeid })
@@ -614,7 +614,7 @@ export async function getAllCustomersWithAnalytics(storeid: string) {
     const { data: debts, error: error2 } = await supabase
       .from('v_customer_debts')
       .select('*')
-      .eq('storeid', storeid)
+      //.eq('storeid', storeid)
 
     if (error2) {
       logError(`${functionName}::getDebts`, error2, { storeid })

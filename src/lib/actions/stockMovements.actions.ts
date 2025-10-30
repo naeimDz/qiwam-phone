@@ -7,10 +7,9 @@
 import * as stockMovementsDb from '@/lib/supabase/db/stockMovments'
 import * as authDb from '@/lib/supabase/db/auth'
 import { StockMovementWithDetails, StockMovementStats } from '@/lib/types'
+import { ActionResult } from '../types/action.types'
 
-type ActionResult<T = void> =
-  | { success: true; data: T }
-  | { success: false; error: string }
+
 
 // ==================== REPORTING ACTIONS ====================
 

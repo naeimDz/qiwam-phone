@@ -9,10 +9,9 @@ import * as salesDb from '@/lib/supabase/db/sales'
 import * as saleItemsDb from '@/lib/supabase/db/saleItems'
 import * as authDb from '@/lib/supabase/db/auth'
 import { Sale, SaleItem } from '@/lib/types'
+import { ActionResult } from '../types/action.types'
 
-type ActionResult<T = void> = 
-  | { success: true; data: T }
-  | { success: false; error: string }
+
 
 // ==================== SALE ACTIONS ====================
 

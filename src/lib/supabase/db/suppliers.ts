@@ -357,8 +357,8 @@ export async function getTopSuppliers(storeid: string, limit: number = 10): Prom
     const { data, error } = await supabase
       .from('v_top_suppliers')
       .select('*')
-      .eq('storeid', storeid)
-      .order('total_purchase_amount', { ascending: false })
+      //.eq('storeid', storeid)
+      .order('total_paid', { ascending: false })
       .limit(limit)
 
     if (error) {
@@ -406,7 +406,7 @@ export async function getSupplierDebts(storeid: string): Promise<SupplierDebt[]>
     const { data, error } = await supabase
       .from('v_supplier_debts')
       .select('*')
-      .eq('storeid', storeid)
+      //.eq('storeid', storeid)
       .order('total_debt', { ascending: false })
 
     if (error) {
@@ -447,7 +447,7 @@ export async function getSupplierDebtsByThreshold(
     const { data, error } = await supabase
       .from('v_supplier_debts')
       .select('*')
-      .eq('storeid', storeid)
+      //.eq('storeid', storeid)
       .gte('total_debt', minDebt)
       .order('total_debt', { ascending: false })
 
@@ -565,7 +565,7 @@ export async function getAllSuppliersWithAnalytics(storeid: string) {
     const { data: topSuppliers, error: error1 } = await supabase
       .from('v_top_suppliers')
       .select('*')
-      .eq('storeid', storeid)
+      //.eq('storeid', storeid)
 
     if (error1) {
       logError(`${functionName}::getTopSuppliers`, error1, { storeid })
@@ -576,7 +576,7 @@ export async function getAllSuppliersWithAnalytics(storeid: string) {
     const { data: debts, error: error2 } = await supabase
       .from('v_supplier_debts')
       .select('*')
-      .eq('storeid', storeid)
+      //.eq('storeid', storeid)
 
     if (error2) {
       logError(`${functionName}::getDebts`, error2, { storeid })

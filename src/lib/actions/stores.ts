@@ -5,10 +5,9 @@ import { revalidatePath } from 'next/cache'
 import * as storesDb from '@/lib/supabase/db/stores'
 import * as authDb from '@/lib/supabase/db/auth'
 import { StoreSettings } from '@/lib/types'
+import { ActionResult } from '../types/action.types'
 
-type ActionResult<T = void> = 
-  | { success: true; data: T }
-  | { success: false; error: string }
+
 
 /**
  * Get current store info

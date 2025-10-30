@@ -6,10 +6,8 @@ import * as suppliersDb from '@/lib/supabase/db/suppliers'
 import * as authDb from '@/lib/supabase/db/auth'
 import { Supplier } from '@/lib/types'
 import { getAllSuppliersWithAnalytics, getSupplierDebts, getSupplierDebtsByThreshold, getSupplierWithPurchaseCount, getTopSuppliers, SupplierDebt, SupplierWithPurchases, TopSupplier } from '@/lib/supabase/db/suppliers'
+import { ActionResult } from '../types/action.types'
 
-type ActionResult<T = void> = 
-  | { success: true; data: T }
-  | { success: false; error: string }
 
 /**
  * Get all suppliers for current user's store

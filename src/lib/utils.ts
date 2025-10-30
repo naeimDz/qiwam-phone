@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { menuItems } from "./menu-config"
+import { ActionResult } from "./types/action.types"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -41,3 +42,32 @@ export function getCurrentDateTime(): string {
 export const getActiveSectionFromPath = (pathname: string) => {
   return menuItems.find((m) => m.href === pathname)?.id || 'dashboard';
 };
+
+
+/**
+ * Create a successful ActionResult
+ */
+export function success<T>(data: T): ActionResult<T> {
+  return { success: true, data }
+}
+
+/**
+ * Create a failed ActionResult
+ */
+export function failure<T = void>(error: string): ActionResult<T> {
+  return { success: false, error }
+}
+
+/**
+ * Execute an action and return ActionResult
+ */
+export async function executeAction<T>(
+  fn: () => Promise<T>
+): Promise<ActionResult<T>> {
+  try {
+    const data = await fn()
+    return success(data)
+  } catch (error) {
+    return failure(error instanceof Error ? error.message : 'حدث خطأ')
+  }
+}
