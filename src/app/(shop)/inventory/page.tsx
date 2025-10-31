@@ -3,6 +3,7 @@ import { getBrandsAction } from "@/lib/actions/brands"
 import { InventoryClient } from "./InventoryClient"
 
 export default async function InventoryPage() {
+  
   const [categoriesRes, brandsRes] = await Promise.all([
     getCategoriesAction(),
     getBrandsAction(),

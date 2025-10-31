@@ -514,7 +514,7 @@ export type AuditLog = {
   old_value: Record<string, any> | null
   new_value: Record<string, any> | null
   meta: Record<string, any> | null
-  createdat: Date
+  createdat: string 
   deleted_at: Date | null
 }
 

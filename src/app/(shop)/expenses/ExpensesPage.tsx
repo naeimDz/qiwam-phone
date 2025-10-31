@@ -6,8 +6,7 @@ import { StatsCard } from '@/components/ui/StatsCard'
 import DashboardLayout from '@/components/DashboardLayout'
 import { 
   createExpenseAction, 
-  deleteExpenseAction, 
-  getExpensesAction 
+  deleteExpenseAction,  
 } from '@/lib/actions/expenses.actions'
 import { Expense } from '@/lib/types/expense'
 
@@ -28,8 +27,7 @@ const categories: CategoryType[] = [
   { id: 'other', label: 'أخرى', icon: '💼' }
 ]
 
-export default function ExpensesPage({ initialExpenses = [] }: { initialExpenses?: Expense[] }) {
-  const storeId = '550e8400-e29b-41d4-a716-446655440000'
+export default function ExpensesPage({ initialExpenses = [] ,storeId , userid}: { initialExpenses?: Expense[],storeId: string , userid: string}) {
   
   // State
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses)
@@ -85,7 +83,7 @@ export default function ExpensesPage({ initialExpenses = [] }: { initialExpenses
 
   // ➕ Add expense
   const handleAddExpense = useCallback(async () => {
-    if (!formData.amount || !formData.category || !formData.description.trim()) {
+    if (!formData.amount || !formData.category) {
       alert('يرجى ملء جميع الحقول')
       return
     }
@@ -97,7 +95,7 @@ export default function ExpensesPage({ initialExpenses = [] }: { initialExpenses
         category: formData.category,
         amount: parseFloat(formData.amount),
         description: formData.description.trim(),
-        createdby: 'current-user', // Replace with actual user ID
+        createdby: userid, // Replace with actual user ID
         payment_method: 'cash',
         expense_date: new Date()
       })

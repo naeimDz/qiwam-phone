@@ -39,6 +39,8 @@ export default async function ExpensesPageWrapper() {
   return (
     <ExpensesPage 
       initialExpenses={result.success ? result.data || [] : []} 
+      storeId={user.storeid}
+      userid={user.id}
     />
   )
 }

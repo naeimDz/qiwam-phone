@@ -248,7 +248,7 @@ export async function deletePhoneAction(phoneId: string): Promise<ActionResult> 
 
     await phonesDb.deletePhone(phoneId)
 
-    revalidatePath('/inventory/phones')
+    //revalidatePath('/inventory/phones')
     return { success: true, data: undefined }
   } catch (error: any) {
     return { success: false, error: 'فشل حذف الهاتف' }

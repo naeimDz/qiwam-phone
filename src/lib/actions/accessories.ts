@@ -5,15 +5,13 @@ import { revalidatePath } from 'next/cache'
 import * as accessoriesDb from '@/lib/supabase/db/accessories'
 import * as authDb from '@/lib/supabase/db/auth'
 import { Accessory, AccessoryWithDetails } from '@/lib/types'
+import { ActionResult } from '../types/action.types'
 
-type ActionResult<T = void> = 
-  | { success: true; data: T }
-  | { success: false; error: string }
 
 /**
  * Get all accessories for current user's store
  */
-export async function getAccessoriesAction(activeOnly: boolean = false): Promise<ActionResult<AccessoryWithDetails[]>> {
+export async function getAccessoriesAction(activeOnly: boolean = false, storeid?: string): Promise<ActionResult<AccessoryWithDetails[]>> {
   try {
     const user = await authDb.getCurrentUser()
     if (!user?.storeid) {

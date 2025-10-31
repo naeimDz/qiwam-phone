@@ -19,7 +19,7 @@ import { StatsCard } from '@/components/ui/StatsCard'
 import DashboardLayout from '@/components/DashboardLayout'
 import { CategoriesBrandsModal, Item } from '@/components/modal/CategoriesBrandsModal'
 import { AddProductModal } from '@/components/modal/AddProductModal'
-import { Brand, Category } from '@/lib/types'
+import { AccessoryWithDetails, Brand, Category, PhoneWithDetails, Supplier } from '@/lib/types'
 import { AddAccessoryModal } from '@/components/modal/AddAccessoryModal'
 
 
@@ -39,8 +39,22 @@ interface Product {
 }
 
 interface InventoryClientProps {
+  accessories?: AccessoryWithDetails[]
+  phones?: PhoneWithDetails[]
+  suppliers?: Supplier[]
   categories: Category[]
   brands: Brand[]
+  stats?: {
+    totalPhones: number
+    totalAccessories: number
+    accessories?: any
+    phones?: any
+    totalValue: {
+      phones: number
+      accessories: number
+    }
+  }
+  warnings?: string[]
 }
 export const InventoryClient:React.FC<InventoryClientProps> = ({
   categories,
