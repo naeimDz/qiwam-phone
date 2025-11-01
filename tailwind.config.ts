@@ -17,6 +17,8 @@ const config: Config = {
         primary: "var(--color-primary)",
         secondary: "var(--color-secondary)",
         accent: "var(--color-accent)",
+        //accent: "#10B981",          
+        danger: "#EF4444",          
       },
 
       borderRadius: {

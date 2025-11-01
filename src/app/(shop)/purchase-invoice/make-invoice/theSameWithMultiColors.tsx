@@ -549,14 +549,13 @@ const handleSaveDraft = (): void => {
     return 'ابحث أو اكتب ! للجديد'
   }
 
-
-const getBorderColor = (): string => {
-  if (isNewProduct) return `border-[var(--color-secondary)] bg-gradient-to-r from-[var(--color-bg-primary)] to-[var(--color-secondary)]/10`
-  if (parserMode === 'type') return `border-[var(--color-primary)] bg-gradient-to-r from-[var(--color-bg-primary)] to-[var(--color-primary)]/10`
-  if (parserMode === 'categories') return `border-[var(--color-accent)] bg-gradient-to-r from-[var(--color-bg-primary)] to-[var(--color-accent)]/10`
-  if (parserMode === 'complete') return `border-[var(--color-secondary)] bg-gradient-to-r from-[var(--color-bg-primary)] to-[var(--color-secondary)]/10`
-  return 'border-[var(--color-border)]'
-}
+  const getBorderColor = (): string => {
+    if (isNewProduct) return 'border-green-400 bg-gradient-to-r from-white to-green-50'
+    if (parserMode === 'type') return 'border-purple-400 bg-gradient-to-r from-white to-purple-50'
+    if (parserMode === 'categories') return 'border-pink-400 bg-gradient-to-r from-white to-pink-50'
+    if (parserMode === 'complete') return 'border-amber-400 bg-gradient-to-r from-white to-amber-50'
+    return 'border-blue-200'
+  }
 
   const phonesWithoutIMEI = purchaseItems.filter(
     item => item.productType === 'phone' && !item.imei
@@ -566,16 +565,16 @@ const getBorderColor = (): string => {
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* Header */}
-        <div className="bg-[var(--color-bg-primary)] rounded-xl shadow-lg p-6 border-t-4 border-[var(--color-primary)]">
-          <h1 className="text-4xl font-bold text-[var(--color-text-primary)] mb-6">إدخال المشتريات</h1>
+        <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-blue-600">
+          <h1 className="text-4xl font-bold text-gray-800 mb-6">إدخال المشتريات</h1>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">المورّد *</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">المورّد *</label>
               <select
                 value={supplier}
                 onChange={(e) => setSupplier(e.target.value)}
-                className="w-full px-3 py-2 border-2 border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none bg-[var(--color-bg-secondary)]"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               >
                 <option value="">اختر المورّد...</option>
                 {MOCK_SUPPLIERS.map(s => (
@@ -585,34 +584,34 @@ const getBorderColor = (): string => {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">رقم الوثيقة</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">رقم الوثيقة</label>
               <input
                 type="text"
                 value={docNumber}
                 onChange={(e) => setDocNumber(e.target.value)}
                 placeholder="تلقائي"
-                className="w-full px-3 py-2 border-2 border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none bg-[var(--color-bg-secondary)]"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">التاريخ</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">التاريخ</label>
               <input
                 type="date"
                 value={docDate}
                 onChange={(e) => setDocDate(e.target.value)}
-                className="w-full px-3 py-2 border-2 border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none bg-[var(--color-bg-secondary)]"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">ملاحظات</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">ملاحظات</label>
               <input
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="ملاحظات إضافية..."
-                className="w-full px-3 py-2 border-2 border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none bg-[var(--color-bg-secondary)]"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
           </div>
@@ -647,17 +646,17 @@ const getBorderColor = (): string => {
           </div>
         )}
 
-        {/* ==================== Smart Parser ==================== */}
-        <div className={`bg-[var(--color-bg-primary)] rounded-xl shadow-lg p-8 transition-all duration-300 border-2 ${getBorderColor()}`}>
+        {/* Smart Parser */}
+        <div className={`bg-white rounded-xl shadow-lg p-8 transition-all duration-300 border-2 ${getBorderColor()}`}>
           <div className="flex items-center gap-3 mb-2">
-            {parserMode === 'type' && <Info className="w-6 h-6 text-[var(--color-primary)] animate-pulse" />}
-            {isNewProduct && <Plus className="w-6 h-6 text-[var(--color-secondary)]" />}
-            <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
+            {parserMode === 'type' && <Info className="w-6 h-6 text-purple-600 animate-pulse" />}
+            {isNewProduct && <Plus className="w-6 h-6 text-green-600" />}
+            <h2 className="text-xl font-bold text-gray-800">
               {parserMode === 'type' ? '📦 اختر النوع أولاً' :
-              parserMode === 'categories' ? '📂 اختر الفئة' :
-              isNewProduct ? '✨ منتج جديد' :
-              parserMode === 'search' ? '⚡ بحث سريع' :
-              '✍️ إكمال البيانات'}
+               parserMode === 'categories' ? '📂 اختر الفئة' :
+               isNewProduct ? '✨ منتج جديد' :
+               parserMode === 'search' ? '⚡ بحث سريع' :
+               '✍️ إكمال البيانات'}
             </h2>
           </div>
 
@@ -669,20 +668,19 @@ const getBorderColor = (): string => {
               onChange={(e) => setParserInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={getPlaceholder()}
-              className={`w-full px-6 py-4 text-lg bg-[var(--color-bg-secondary)] border-2 rounded-lg focus:ring-2 outline-none transition-all ${
-                isNewProduct ? 'border-[var(--color-secondary)] focus:ring-[var(--color-secondary)]' :
-                parserMode === 'type' ? 'border-[var(--color-primary)] focus:ring-[var(--color-primary)]' :
-                parserMode === 'categories' ? 'border-[var(--color-accent)] focus:ring-[var(--color-accent)]' :
-                parserMode === 'complete' ? 'border-[var(--color-secondary)] focus:ring-[var(--color-secondary)]' :
-                'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
+              className={`w-full px-6 py-4 text-lg bg-gray-50 border-2 rounded-lg focus:ring-2 outline-none transition-all ${
+                isNewProduct ? 'border-green-300 focus:ring-green-500' :
+                parserMode === 'type' ? 'border-purple-300 focus:ring-purple-500' :
+                parserMode === 'categories' ? 'border-pink-300 focus:ring-pink-500' :
+                parserMode === 'complete' ? 'border-amber-300 focus:ring-amber-500' :
+                'border-gray-300 focus:ring-blue-500'
               }`}
-              style={{ color: 'var(--color-text-primary)' }}
             />
 
             {getMissingFields().length > 0 && (
               <div className="absolute -bottom-7 right-6 flex gap-2 flex-wrap">
                 {getMissingFields().map((field, idx) => (
-                  <span key={idx} className="text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 px-2 py-1 rounded font-bold animate-pulse">
+                  <span key={idx} className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded font-bold animate-pulse">
                     ⚠️ يحتاج: {field}
                   </span>
                 ))}
@@ -692,7 +690,7 @@ const getBorderColor = (): string => {
             {parserMode === 'complete' && isNewProduct && getMissingFields().length === 0 && (
               <button
                 onClick={handleAddNewProduct}
-                className="absolute left-2 top-2 bottom-2 px-4 bg-[var(--color-primary)] hover:bg-opacity-90 text-white rounded-lg font-bold flex items-center gap-2 transition-all active:scale-95"
+                className="absolute left-2 top-2 bottom-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold flex items-center gap-2 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 أضف
@@ -700,8 +698,13 @@ const getBorderColor = (): string => {
             )}
 
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute top-full right-0 left-0 mt-2 bg-[var(--color-bg-primary)] border-2 border-[var(--color-primary)] rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
-                <div className="p-2 border-b font-semibold text-sm sticky top-0 bg-[var(--color-bg-secondary)]">
+              <div className="absolute top-full right-0 left-0 mt-2 bg-white border-2 border-blue-300 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
+                <div className={`p-2 border-b font-semibold text-sm sticky top-0 ${
+                  parserMode === 'type' ? 'bg-purple-50 text-purple-800' :
+                  parserMode === 'categories' ? 'bg-pink-50 text-pink-800' :
+                  parserMode === 'brands' ? 'bg-blue-50 text-blue-800' :
+                  'bg-green-50 text-green-800'
+                }`}>
                   {parserMode === 'type' && '📦 اختر النوع (الأهم!)'}
                   {parserMode === 'brands' && '🏷️ اختر الماركة'}
                   {parserMode === 'categories' && '📂 اختر الفئة (للإكسسوارات)'}
@@ -714,10 +717,10 @@ const getBorderColor = (): string => {
                     <button
                       key={idx}
                       onClick={() => handleSelectType(typeObj)}
-                      className="w-full text-right px-4 py-4 hover:bg-[var(--color-hover)] transition-colors border-b last:border-b-0 flex items-center gap-3"
+                      className="w-full text-right px-4 py-4 hover:bg-purple-50 transition-colors border-b last:border-b-0 flex items-center gap-3"
                     >
-                      <Icon className="w-6 h-6 text-[var(--color-primary)]" />
-                      <p className="font-bold text-[var(--color-text-primary)] text-lg">{typeObj.label}</p>
+                      <Icon className="w-6 h-6 text-purple-600" />
+                      <p className="font-bold text-gray-800 text-lg">{typeObj.label}</p>
                     </button>
                   )
                 })}
@@ -726,9 +729,9 @@ const getBorderColor = (): string => {
                   <button
                     key={brand.id}
                     onClick={() => handleSelectBrand(brand)}
-                    className="w-full text-right px-4 py-3 hover:bg-[var(--color-hover)] transition-colors border-b last:border-b-0"
+                    className="w-full text-right px-4 py-3 hover:bg-blue-50 transition-colors border-b last:border-b-0"
                   >
-                    <p className="font-semibold text-[var(--color-text-primary)]">{brand.name}</p>
+                    <p className="font-semibold text-gray-800">{brand.name}</p>
                   </button>
                 ))}
 
@@ -736,9 +739,9 @@ const getBorderColor = (): string => {
                   <button
                     key={cat.id}
                     onClick={() => handleSelectCategory(cat)}
-                    className="w-full text-right px-4 py-3 hover:bg-[var(--color-hover)] transition-colors border-b last:border-b-0"
+                    className="w-full text-right px-4 py-3 hover:bg-pink-50 transition-colors border-b last:border-b-0"
                   >
-                    <p className="font-semibold text-[var(--color-text-primary)]">{cat.name}</p>
+                    <p className="font-semibold text-gray-800">{cat.name}</p>
                   </button>
                 ))}
 
@@ -746,16 +749,16 @@ const getBorderColor = (): string => {
                   <button
                     key={product.id}
                     onClick={() => handleSelectProduct(product)}
-                    className="w-full text-right px-4 py-3 hover:bg-[var(--color-hover)] transition-colors border-b last:border-b-0"
+                    className="w-full text-right px-4 py-3 hover:bg-blue-50 transition-colors border-b last:border-b-0"
                   >
                     <div className="flex items-center gap-3">
                       {product.type === 'phone' ?
-                        <Smartphone className="w-5 h-5 text-[var(--color-primary)]" />:
-                        <Headphones className="w-5 h-5 text-[var(--color-secondary)]" />
+                        <Smartphone className="w-5 h-5 text-blue-600" />:
+                        <Headphones className="w-5 h-5 text-purple-600" />
                       }
                       <div className="flex-1">
-                        <p className="font-semibold text-[var(--color-text-primary)]">{product.name}</p>
-                        <p className="text-xs text-[var(--color-text-secondary)]">{product.brandname} • {product.type} • {product.buyprice} دج</p>
+                        <p className="font-semibold text-gray-800">{product.name}</p>
+                        <p className="text-xs text-gray-500">{product.brandname} • {product.type} • {product.buyprice} دج</p>
                       </div>
                     </div>
                   </button>
@@ -812,50 +815,50 @@ const getBorderColor = (): string => {
           </div>
         </div>
 
-        {/* ==================== Items Table ====================*/}
-        <div className="bg-[var(--color-bg-primary)] rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-4">المنتجات ({purchaseItems.length})</h2>
+        {/* Items Table */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">المنتجات ({purchaseItems.length})</h2>
 
           {purchaseItems.length === 0 ? (
-            <div className="p-8 text-center text-[var(--color-text-secondary)] bg-[var(--color-bg-secondary)] rounded-lg">
+            <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-lg">
               ابدأ بإضافة منتجات من الأعلى
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-[var(--color-bg-secondary)] border-b-2 border-[var(--color-border)]">
-                    <th className="text-right px-4 py-3 font-bold text-[var(--color-text-primary)]">المنتج</th>
-                    <th className="text-right px-4 py-3 font-bold text-[var(--color-text-primary)]">النوع</th>
-                    <th className="text-right px-4 py-3 font-bold text-[var(--color-text-primary)]">الماركة</th>
-                    <th className="text-right px-4 py-3 font-bold text-[var(--color-text-primary)]">IMEI</th>
-                    <th className="text-center px-4 py-3 font-bold text-[var(--color-text-primary)]">السعر</th>
-                    <th className="text-center px-4 py-3 font-bold text-[var(--color-text-primary)]">الكمية</th>
-                    <th className="text-center px-4 py-3 font-bold text-[var(--color-text-primary)]">المجموع</th>
-                    <th className="text-center px-4 py-3 font-bold text-[var(--color-text-primary)]">حذف</th>
+                  <tr className="bg-gray-100 border-b-2 border-gray-300">
+                    <th className="text-right px-4 py-3 font-bold text-gray-700">المنتج</th>
+                    <th className="text-right px-4 py-3 font-bold text-gray-700">النوع</th>
+                    <th className="text-right px-4 py-3 font-bold text-gray-700">الماركة</th>
+                    <th className="text-right px-4 py-3 font-bold text-gray-700">IMEI</th>
+                    <th className="text-center px-4 py-3 font-bold text-gray-700">السعر</th>
+                    <th className="text-center px-4 py-3 font-bold text-gray-700">الكمية</th>
+                    <th className="text-center px-4 py-3 font-bold text-gray-700">المجموع</th>
+                    <th className="text-center px-4 py-3 font-bold text-gray-700">حذف</th>
                   </tr>
                 </thead>
                 <tbody>
                   {purchaseItems.map((item) => (
-                    <tr key={item.id} className="border-b border-[var(--color-border)] hover:bg-[var(--color-hover)]">
+                    <tr key={item.id} className="border-b border-gray-200 hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-[var(--color-text-primary)] font-semibold">{item.productName}</span>
+                          <span className="text-gray-800 font-semibold">{item.productName}</span>
                           {item.isNew && (
-                            <span className="text-xs bg-[var(--color-secondary)]/20 text-[var(--color-secondary)] px-2 py-1 rounded font-bold">
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold">
                               جديد
                             </span>
                           )}
                         </div>
                         {item.category && (
-                          <p className="text-xs text-[var(--color-text-secondary)] mt-1">{item.category}</p>
+                          <p className="text-xs text-gray-500 mt-1">{item.category}</p>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs px-3 py-1 rounded font-bold flex items-center gap-1 w-fit ${
                           item.productType === 'phone'
-                            ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
-                            : 'bg-[var(--color-secondary)]/20 text-[var(--color-secondary)]'
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-blue-100 text-blue-700'
                         }`}>
                           {item.productType === 'phone' ?
                             <Smartphone className="w-3 h-3" /> :
@@ -864,7 +867,7 @@ const getBorderColor = (): string => {
                           {item.productType}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-[var(--color-text-primary)]">{item.brand}</td>
+                      <td className="px-4 py-3 text-gray-700">{item.brand}</td>
                       <td className="px-4 py-3">
                         {item.productType === 'phone' ? (
                           <input
@@ -872,14 +875,14 @@ const getBorderColor = (): string => {
                             value={item.imei || ''}
                             onChange={(e) => updateItem(item.id, 'imei', e.target.value)}
                             placeholder="اختياري"
-                            className={`w-32 px-2 py-1 border rounded text-sm bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] 
-                              ${item.imei
-                                ? 'border-[var(--color-primary)]'
-                                : 'border-[var(--color-accent)]'}
-                                `}
+                            className={`w-32 px-2 py-1 border rounded text-sm ${
+                              item.imei
+                                ? 'border-green-300 bg-green-50'
+                                : 'border-orange-300 bg-orange-50'
+                            }`}
                           />
                         ) : (
-                          <span className="text-xs text-[var(--color-text-secondary)]">-</span>
+                          <span className="text-xs text-gray-400">-</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -887,29 +890,29 @@ const getBorderColor = (): string => {
                           type="number"
                           value={item.unitprice}
                           onChange={(e) => updateItem(item.id, 'unitprice', e.target.value)}
-                          className="w-24 px-2 py-1 border border-[var(--color-border)] rounded text-center bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]"
+                          className="w-24 px-2 py-1 border border-gray-300 rounded text-center"
                         />
                       </td>
                       <td className="px-4 py-3 text-center">
                         {item.productType === 'phone' ? (
-                          <span className="text-[var(--color-text-primary)] font-semibold">1</span>
+                          <span className="text-gray-600 font-semibold">1</span>
                         ) : (
                           <input
                             type="number"
                             value={item.qty}
                             onChange={(e) => updateItem(item.id, 'qty', e.target.value)}
-                            className="w-16 px-2 py-1 border border-[var(--color-border)] rounded text-center bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]"
+                            className="w-16 px-2 py-1 border border-gray-300 rounded text-center"
                             min="1"
                           />
                         )}
                       </td>
-                      <td className="px-4 py-3 text-center text-[var(--color-text-primary)] font-bold">
+                      <td className="px-4 py-3 text-center text-gray-800 font-bold">
                         {item.linetotal.toFixed(2)} دج
                       </td>
                       <td className="px-4 py-3 text-center">
                         <button
                           onClick={() => removeItem(item.id)}
-                          className="text-danger hover:text-danger/70 transition-colors"
+                          className="text-red-500 hover:text-red-700 transition-colors"
                         >
                           <Trash2 className="w-5 h-5 inline" />
                         </button>
@@ -924,113 +927,100 @@ const getBorderColor = (): string => {
 
         {/* Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-[var(--color-bg-primary)] rounded-xl shadow-lg p-6 border-r-4 border-[var(--color-primary)]">
-            <p className="text-sm text-[var(--color-text-secondary)] mb-2">المجموع الكلي</p>
-            <p className="text-4xl font-bold text-[var(--color-text-primary)]">{totalAmount} دج</p>
+          <div className="bg-white rounded-xl shadow-lg p-6 border-r-4 border-blue-600">
+            <p className="text-sm text-gray-600 mb-2">المجموع الكلي</p>
+            <p className="text-4xl font-bold text-gray-800">{totalAmount} دج</p>
           </div>
 
-          <div className="bg-[var(--color-bg-primary)] rounded-xl shadow-lg p-6 border-r-4 border-[var(--color-primary)]">
-            <label className="block text-sm text-[var(--color-text-secondary)] mb-2 font-semibold">المبلغ المدفوع</label>
+          <div className="bg-white rounded-xl shadow-lg p-6 border-r-4 border-green-600">
+            <label className="block text-sm text-gray-600 mb-2 font-semibold">المبلغ المدفوع</label>
             <input
               type="number"
               value={paidAmount}
               onChange={(e) => setPaidAmount(e.target.value)}
-              className="w-full px-3 py-2 text-2xl font-bold border-2 border-[var(--color-primary)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none bg-[var(--color-bg-secondary)]"
+              className="w-full px-3 py-2 text-2xl font-bold border-2 border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
             />
           </div>
 
-          <div className="bg-[var(--color-bg-primary)] rounded-xl shadow-lg p-6 border-r-4 border-[var(--color-secondary)]">
-            <p className="text-sm text-[var(--color-text-secondary)] mb-2">المتبقي</p>
-            <p className={`text-4xl font-bold ${parseFloat(remainingAmount) > 0 ? 'text-[var(--color-secondary)]' : 'text-[var(--color-primary)]'}`}>
+          <div className="bg-white rounded-xl shadow-lg p-6 border-r-4 border-orange-600">
+            <p className="text-sm text-gray-600 mb-2">المتبقي</p>
+            <p className={`text-4xl font-bold ${parseFloat(remainingAmount) > 0 ? 'text-orange-600' : 'text-green-600'}`}>
               {remainingAmount} دج
             </p>
           </div>
         </div>
+        {/* Bottom Actions */}
+        <div className="flex gap-3 justify-start flex-wrap ">
+          
+          {/* حفظ مسودة */}
+          <button
+            onClick={handleSaveDraft}
+            disabled={purchaseItems.length === 0}
+            className="px-6 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 text-white rounded-lg font-bold transition-colors flex items-center gap-2 text-sm"
+          >
+            <Save className="w-4 h-4" />
+            💾 حفظ مسودة
+          </button>
+
+          {/* عرض المسودات */}
+          <button
+            onClick={() => setShowDraftManager(true)}
+            className={`px-6 py-2 text-white rounded-lg font-bold transition-colors flex items-center gap-2 text-sm ${
+              drafts.length > 0
+                ? 'bg-purple-600 hover:bg-purple-700'
+                : 'bg-gray-400 cursor-not-allowed'
+            }`}
+            disabled={drafts.length === 0}
+          >
+            <FileText className="w-4 h-4" />
+            📝 المسودات ({drafts.length})
+          </button>
+
+          {/* الإدخال السريع */}
+          <button
+            onClick={() => setShowQuickMode(true)}
+            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition-colors flex items-center gap-2 text-sm"
+          >
+            <Zap className="w-4 h-4" />
+            ⚡ إدخال سريع
+          </button>
+        </div>
 
 
-{/* Bottom Actions */}
-{/* ==================== Secondary Actions ====================*/}
-
-<div className="flex gap-3 justify-start flex-wrap">
-  {/* حفظ مسودة - Secondary Color */}
-  <button
-    onClick={handleSaveDraft}
-    disabled={purchaseItems.length === 0}
-    className={`px-6 py-2 bg-[var(--color-secondary)] hover:bg-opacity-90 hover:shadow-lg disabled:bg-[var(--color-border)] text-white rounded-lg font-bold transition-all duration-200 flex items-center gap-2 text-sm active:scale-95
-    ${purchaseItems.length > 0
-        ? 'bg-[var(--color-accent)] hover:bg-opacity-90 hover:shadow-lg text-white'
-        : 'bg-[var(--color-border)] text-[var(--color-text-secondary)] cursor-not-allowed'
-     }
-    `}>
-    <Save className="w-4 h-4" />
-    💾 حفظ مسودة
-  </button>
-
-  {/* المسودات - Primary Color */}
-  <button
-    onClick={() => setShowDraftManager(true)}
-    className={`px-6 py-2 rounded-lg font-bold transition-all duration-200 flex items-center gap-2 text-sm active:scale-95 ${
-      drafts.length > 0
-        ? 'bg-[var(--color-accent)] hover:bg-opacity-90 hover:shadow-lg text-white'
-        : 'bg-[var(--color-border)] text-[var(--color-text-secondary)] cursor-not-allowed'
-    }`}
-    disabled={drafts.length === 0}
-  >
-    <FileText className="w-4 h-4" />
-    📝 المسودات ({drafts.length})
-  </button>
-
-  {/* إدخال سريع - Accent Color */}
-  <button
-    onClick={() => setShowQuickMode(true)}
-    className="px-6 py-2 bg-[var(--color-accent)] hover:bg-opacity-90 hover:shadow-lg text-white rounded-lg font-bold transition-all duration-200 flex items-center gap-2 text-sm active:scale-95"
-  >
-    <Zap className="w-4 h-4" />
-    ⚡ إدخال سريع
-  </button>
-</div>
-
-
-{/* ==================== Primary Actions ====================*/}
-<div className="flex gap-3 justify-start pt-2 border-t border-[var(--color-border)] flex-wrap">
-  {/* حفظ وتحديث - Primary Color (الأساسي) */}
-  <button
-    onClick={handleSubmit}
-    disabled={isLoading}
-    className="px-8 py-3 bg-[var(--color-primary)] hover:bg-opacity-90 hover:shadow-lg disabled:bg-[var(--color-border)] text-white rounded-lg font-bold transition-all duration-200 flex items-center gap-2 active:scale-95"
-  >
-    {isLoading ? (
-      <>
-        <Loader className="w-5 h-5 animate-spin" />
-        جاري الحفظ...
-      </>
-    ) : (
-      <>
-        <CheckCircle className="w-5 h-5" />
-        <span>حفظ وتحديث المخزون</span>
-      </>
-    )}
-  </button>
-
-  {/* مسح الكل - Danger Color */}
-  <button
-    onClick={() => {
-      if (purchaseItems.length === 0) return
-      if (!window.confirm('هل تريد مسح جميع المنتجات؟')) return
-      
-      setPurchaseItems([])
-      setSupplier('')
-      setDocNumber('')
-      setNotes('')
-      setPaidAmount('0')
-      setSubmitMessage(null)
-    }}
-    disabled={isLoading || purchaseItems.length === 0}
-    className="px-6 py-3 bg-danger hover:bg-opacity-90 hover:shadow-lg disabled:bg-[var(--color-border)] text-white rounded-lg font-bold transition-all duration-200 active:scale-95"
-  >
-    مسح الكل
-  </button>
-</div>
+        {/* Actions */}
+        <div className="flex gap-3 justify-start pt-2 border-t border-gray-300 flex-wrap">
+          <button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-bold transition-colors flex items-center gap-2"
+          >
+            {isLoading ? (
+              <>
+                <Loader className="w-5 h-5 animate-spin" />
+                جاري الحفظ...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-5 h-5" />
+                <span>حفظ وتحديث المخزون</span>
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setPurchaseItems([])
+              setSupplier('')
+              setDocNumber('')
+              setNotes('')
+              setPaidAmount('0')
+              setSubmitMessage(null)
+            }}
+            disabled={isLoading}
+            className="px-6 py-3 bg-gray-400 hover:bg-gray-500 disabled:bg-gray-300 text-white rounded-lg font-bold transition-colors"
+          >
+            مسح الكل
+          </button>
+        </div>
 
             
         <QuickMode

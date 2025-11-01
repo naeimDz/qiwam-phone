@@ -720,3 +720,59 @@ export type UpdateReturnTransaction = Partial<Omit<ReturnTransaction, 'id' | 'st
 export type UpdateTradeTransaction = Partial<Omit<TradeTransaction, 'id' | 'storeid' | 'createdat'>>;
 export type UpdateCashRegister = Partial<Omit<CashRegister, 'id' | 'storeid' | 'createdat'>>;
 export type UpdateDocumentSequence = Partial<Omit<DocumentSequence, 'id' | 'storeid' | 'createdat'>>;
+
+
+
+
+
+
+
+/**
+ * All Products View - Unified catalog (phones + accessories)
+ */
+export type AllProductsView = {
+  product_type: 'phone' | 'accessory'
+  id: string
+  storeid: string
+  name: string
+  brandid: string | null
+  brand_name: string | null
+  status: string | null // for phones: available/sold/returned/damaged/reserved
+  identifier: string | null // IMEI for phones, barcode/SKU for accessories
+  display_price: number
+  available_qty: number // 1 for available phones, quantity for accessories
+  createdat: Date
+}
+
+/**
+ * Quick POS Items View - Optimized for fast checkout
+ */
+export type QuickPosItem = {
+  id: string
+  storeid: string
+  name: string
+  category_name: string | null
+  barcode: string | null
+  sku: string | null
+  quantity: number
+  sellprice: number
+  minqty: number
+  stock_status: 'low_stock' | 'ok'
+}
+
+
+
+// ==================== للمشتريات فقط ====================
+export type PurchaseSearchResult = {
+  product_type: 'phone' | 'accessory'
+  id: string
+  storeid: string
+  name: string
+  model: string | null              // ✅ مهم: لتمييز الهواتف
+  brandid: string | null
+  brand_name: string | null         // ✅ بحث بالماركة
+  category_name: string | null      // ✅ فئة الإكسسوار فقط
+  buyprice: number                  // ✅ السعر الافتراضي
+  sellprice: number                 // معلومات إضافية
+  createdat: Date
+}
